@@ -4,5 +4,5 @@ export const searchTool = new TavilySearch({
   maxResults: 5,
   topic: "general",
   includeImages:true,
-  apiKey: process.env.TAVILY_API_KEY || "dummy_key"
+  tavilyApiKey: process.env.TAVILY_API_KEY || "dummy_key"
 });
