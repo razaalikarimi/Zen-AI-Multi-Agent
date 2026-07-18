@@ -6,7 +6,10 @@ try {
   const module = await import("../serviceAccount.json", { with: { type: "json" } });
   serviceAccount = module.default;
 } catch (e) {
-  // Fallback to environment variable on Render / production
+  // ignored
+}
+
+if (!serviceAccount || serviceAccount.type === "paste your service account file") {
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     try {
       serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
