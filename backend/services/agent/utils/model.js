@@ -8,15 +8,14 @@ import { ChatOpenRouter } from "@langchain/openrouter";
 const openRouter = new ChatOpenRouter({
   model: "deepseek/deepseek-chat",
   temperature: 0,
-  maxTokens:2500
-  // other params...
+  maxTokens: 2500,
+  apiKey: process.env.OPENROUTER_API_KEY || "dummy_key"
 });
-
 
 export const gemini =
   new ChatGoogleGenerativeAI({
     model: "gemini-2.5-flash",
-    apiKey: process.env.GOOGLE_API_KEY
+    apiKey: process.env.GOOGLE_API_KEY || "dummy_key"
   });
 
 const groq = new ChatGroq({
@@ -24,8 +23,9 @@ const groq = new ChatGroq({
   temperature: 0,
   maxTokens: undefined,
   maxRetries: 2,
-  // other params...
-})
+  apiKey: process.env.GROQ_API_KEY || "dummy_key"
+});
+
 
 
 export const getModel =
