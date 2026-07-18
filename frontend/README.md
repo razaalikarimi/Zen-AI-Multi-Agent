@@ -1,4 +1,4 @@
-﻿# ðŸ§  Zen AI - Frontend Client
+# Zen AI - Frontend Client
 
 [![React Version](https://img.shields.io/badge/React-19.2.6-blue.svg?logo=react)](https://react.dev/)
 [![Vite Version](https://img.shields.io/badge/Vite-8.0.12-646CFF.svg?logo=vite)](https://vitejs.dev/)
@@ -10,95 +10,92 @@ Zen AI's frontend is a high-performance, single-page application (SPA) built usi
 
 ---
 
-## ðŸ“‹ Table of Contents
+## Table of Contents
 
-1. [Features](#-features)
-2. [Tech Stack](#-tech-stack)
-3. [Directory Structure](#-directory-structure)
-4. [Environment Variables](#-environment-variables)
-5. [Getting Started](#-getting-started)
-6. [Key Components & Core Logic](#-key-components--core-logic)
-7. [State Management (Redux)](#-state-management-redux)
-8. [API Integration Layer](#-api-integration-layer)
+1. [Features](#features)
+2. [Tech Stack](#tech-stack)
+3. [Directory Structure](#directory-structure)
+4. [Environment Variables](#environment-variables)
+5. [Getting Started](#getting-started)
+6. [Key Components](#key-components)
+7. [State Management](#state-management)
+8. [API Integration](#api-integration)
 
 ---
 
-## âœ¨ Features
+## Features
 
 - **Interactive Chat Interface**: Sleek message list with markdown parsing, syntax highlighting for code blocks, and dynamic responses.
 - **Claude-style Artifacts Panel**: Intercepts AI-generated code blocks and renders them in a dedicated split-screen view. Includes:
   - Live preview of static HTML/JS code.
-  - Interactive code editing using the integration of Monaco Editor.
-- **Micro-Animations**: Built with Framer Motion for organic UI transitions, sidebar collapses, billing drawer slides, and modal popups.
-- **Flexible Model Selection**: Instant model switching (Gemini, Groq, DeepSeek, OpenRouter) via a simple UI dropdown.
-- **Secure Authentication**: Uses Firebase Client SDK for password-based or social authentication, integrated with a backend JWT validation middleware.
-- **Razorpay Subscription Flow**: Sleek checkout drawer linked to Razorpay's API to upgrade user plans to premium tiers.
+  - Interactive code editing using Monaco Editor.
+- **Micro-Animations**: Built with Framer Motion for organic UI transitions.
+- **Flexible Model Selection**: Instant model switching (Gemini, Groq, DeepSeek, OpenRouter).
+- **Secure Authentication**: Firebase Client SDK for Google OAuth login.
+- **Razorpay Subscription Flow**: Checkout drawer linked to Razorpay's API.
 
 ---
 
-## ðŸ› ï¸ Tech Stack
+## Tech Stack
 
-- **Core Framework**: [React 19](file:///e:/01%20Major%20Project/Multi_agent/zen-ai/frontend/package.json) & [Vite 8](file:///e:/01%20Major%20Project/Multi_agent/zen-ai/frontend/package.json)
-- **Styling**: [Tailwind CSS v4](file:///e:/01%20Major%20Project/Multi_agent/zen-ai/frontend/package.json) (PostCSS & `@tailwindcss/vite` plugin)
-- **State Management**: [@reduxjs/toolkit](file:///e:/01%20Major%20Project/Multi_agent/zen-ai/frontend/package.json) & [react-redux](file:///e:/01%20Major%20Project/Multi_agent/zen-ai/frontend/package.json)
-- **Auth**: [Firebase JS SDK](file:///e:/01%20Major%20Project/Multi_agent/zen-ai/frontend/package.json) (Client Authentication)
-- **Editor**: [@monaco-editor/react](file:///e:/01%20Major%20Project/Multi_agent/zen-ai/frontend/package.json) (Visual code editing)
-- **Animations**: [Framer Motion v12](file:///e:/01%20Major%20Project/Multi_agent/zen-ai/frontend/package.json)
-- **Icons**: `lucide-react` & `react-icons`
-- **Markdown & Code Rendering**: `react-markdown`, `react-syntax-highlighter`, `remark-gfm`
-- **API Client**: `axios` with interceptors for authorization handling
+- **Core Framework**: React 19 & Vite 8
+- **Styling**: Tailwind CSS v4 (`@tailwindcss/vite` plugin)
+- **State Management**: Redux Toolkit & react-redux
+- **Auth**: Firebase JS SDK (Client Authentication)
+- **Editor**: @monaco-editor/react (Visual code editing)
+- **Animations**: Framer Motion v12
+- **Icons**: lucide-react & react-icons
+- **Markdown & Code Rendering**: react-markdown, react-syntax-highlighter, remark-gfm
+- **API Client**: axios with interceptors
 
 ---
 
-## ðŸ“‚ Directory Structure
-
-Below is the directory tree of the frontend codebase:
+## Directory Structure
 
 ```bash
-zen-ai/frontend/
-â”œâ”€â”€ src/
-â”‚   â”œâ”€â”€ assets/             # Static assets (images, logos, etc.)
-â”‚   â”œâ”€â”€ components/         # Reusable UI components
-â”‚   â”‚   â”œâ”€â”€ AiBanner.jsx    # UI banner promoting premium capabilities
-â”‚   â”‚   â”œâ”€â”€ ArtifactPanel.jsx # Interactive panel to view/edit generated code
-â”‚   â”‚   â”œâ”€â”€ BillingDrawer.jsx # Subscription/billing popup UI (Razorpay integration)
-â”‚   â”‚   â”œâ”€â”€ ChatArea.jsx    # Wrapper for messages list and chat input
-â”‚   â”‚   â”œâ”€â”€ ChatInput.jsx   # Input text area with file attachment and submit controls
-â”‚   â”‚   â”œâ”€â”€ MessageBubble.jsx# Render bubbles for user and assistant messages
-â”‚   â”‚   â”œâ”€â”€ MessageList.jsx  # Lists message bubbles chronologically
-â”‚   â”‚   â”œâ”€â”€ ModelSelector.jsx# Dropdown to choose LLM models
-â”‚   â”‚   â”œâ”€â”€ Navbar.jsx      # Top application header with profile/auth controls
-â”‚   â”‚   â””â”€â”€ Sidebar.jsx     # Side menu holding previous conversations and settings
-â”‚   â”œâ”€â”€ features/           # API endpoints and network handlers
-â”‚   â”‚   â”œâ”€â”€ agent.api.js    # Multi-agent process communications
-â”‚   â”‚   â”œâ”€â”€ billing.api.js  # Subscription order & payment verification requests
-â”‚   â”‚   â”œâ”€â”€ conversation.api.js # Thread list fetching, creating, and deleting
-â”‚   â”‚   â””â”€â”€ message.api.js  # Message history fetching and sending API calls
-â”‚   â”œâ”€â”€ hooks/              # Custom React Hooks
-â”‚   â”‚   â””â”€â”€ useCurrentUser.jsx# Hook retrieving user state from store
-â”‚   â”œâ”€â”€ redux/              # Redux slices and store configuration
-â”‚   â”‚   â”œâ”€â”€ store.js        # Configured Redux store
-â”‚   â”‚   â”œâ”€â”€ user.slice.js   # User session and auth state
-â”‚   â”‚   â”œâ”€â”€ message.slice.js# Active messages list state
-â”‚   â”‚   â””â”€â”€ conversation.slice.js # Active thread list state
-â”‚   â”œâ”€â”€ utils/              # Utility helper functions
-â”‚   â”‚   â”œâ”€â”€ axios.js        # Custom Axios client with base URL & interceptors
-â”‚   â”‚   â””â”€â”€ detectLanguage.js# Language auto-detection for Monaco syntax highlighting
-â”‚   â”œâ”€â”€ App.jsx             # Main application router and core layout wrapper
-â”‚   â”œâ”€â”€ index.css           # Global stylesheet defining custom Tailwind theme variables
-â”‚   â””â”€â”€ main.jsx            # React root mount point
-â”œâ”€â”€ .env                    # Local environment config variables
-â”œâ”€â”€ eslint.config.js        # Code quality and style lint rules
-â”œâ”€â”€ index.html              # Core HTML entrypoint
-â”œâ”€â”€ package.json            # NPM project dependencies and scripts
-â””â”€â”€ vite.config.js          # Vite configuration
+frontend/
+├── src/
+│   ├── assets/                  # Static assets
+│   ├── components/
+│   │   ├── AiBanner.jsx         # Premium AI capabilities banner
+│   │   ├── ArtifactPanel.jsx    # Code sandbox with Monaco Editor & iframe preview
+│   │   ├── BillingDrawer.jsx    # Razorpay subscription drawer
+│   │   ├── ChatArea.jsx         # Chat messages + input wrapper
+│   │   ├── ChatInput.jsx        # Input with file attach, voice, agent selector
+│   │   ├── MessageBubble.jsx    # User & assistant message renderer
+│   │   ├── MessageList.jsx      # Chronological message display
+│   │   ├── ModelSelector.jsx    # LLM model dropdown
+│   │   ├── Navbar.jsx           # Top header bar
+│   │   └── Sidebar.jsx          # Conversation history sidebar
+│   ├── features/
+│   │   ├── agent.api.js         # Agent API calls
+│   │   ├── billing.api.js       # Payment order/verify APIs
+│   │   ├── conversation.api.js  # Thread CRUD
+│   │   └── message.api.js       # Message fetch/send
+│   ├── hooks/
+│   │   └── useCurrentUser.jsx   # Auth user hook
+│   ├── redux/
+│   │   ├── store.js             # Redux store
+│   │   ├── user.slice.js        # User auth state
+│   │   ├── message.slice.js     # Active messages state
+│   │   └── conversation.slice.js # Conversation list state
+│   ├── utils/
+│   │   ├── axios.js             # Axios client with base URL & interceptors
+│   │   └── detectLanguage.js    # Monaco syntax language detection
+│   ├── App.jsx                  # Root router & layout
+│   ├── index.css                # Global Tailwind theme variables
+│   └── main.jsx                 # React DOM mount
+├── .env                         # Environment config
+├── index.html                   # HTML entrypoint
+├── package.json                 # Dependencies
+└── vite.config.js               # Vite config
 ```
 
 ---
 
-## ðŸ”‘ Environment Variables
+## Environment Variables
 
-Create a file named `.env` in the root of the `frontend/` directory (see [.env](file:///e:/01%20Major%20Project/Multi_agent/zen-ai/frontend/.env) for layout):
+Create `.env` in the `frontend/` root:
 
 ```env
 VITE_FIREBASE_API_KEY=your_firebase_api_key_here
@@ -106,68 +103,62 @@ VITE_SERVER_URL=http://localhost:8000
 VITE_RAZORPAY_KEY=rzp_test_your_razorpay_key_id
 ```
 
-### Configuration Details:
-- **`VITE_FIREBASE_API_KEY`**: Authenticates requests to the Google Firebase project.
-- **`VITE_SERVER_URL`**: Point this to the API Gateway port. Default local development value is `http://localhost:8000`.
-- **`VITE_RAZORPAY_KEY`**: Needed for the client SDK to launch the checkout script.
+- **`VITE_FIREBASE_API_KEY`**: Google Firebase web client key.
+- **`VITE_SERVER_URL`**: API Gateway base URL (default: `http://localhost:8000`).
+- **`VITE_RAZORPAY_KEY`**: Razorpay public key for checkout.
 
 ---
 
-## ðŸš€ Getting Started
+## Getting Started
 
-To run the frontend module in a local environment:
-
-### 1. Install Dependencies
-Navigate to the frontend folder and run npm install:
+### Install Dependencies
 ```bash
 cd frontend
 npm install
 ```
 
-### 2. Launch Development Server
+### Development Server
 ```bash
 npm run dev
 ```
-By default, the application runs on [http://localhost:5173](http://localhost:5173).
+Opens at **http://localhost:5173**
 
-### 3. Build for Production
-To bundle the files into static assets (`dist` folder) optimized for CDN deployment:
+### Production Build
 ```bash
 npm run build
 ```
 
 ---
 
-## ðŸ§© Key Components & Core Logic
+## Key Components
 
-### 1. Artifact Rendering ([ArtifactPanel.jsx](file:///e:/01%20Major%20Project/Multi_agent/zen-ai/frontend/src/components/ArtifactPanel.jsx))
-This component splits the screen and renders rich content when code block markers are returned by the agent. It integrates:
-- **Monaco Editor**: Embedded React Monaco editor letting users inspect and alter code in real time.
-- **Sandboxed Preview**: Renders code directly into an `<iframe>` container using a `srcDoc` template to run custom HTML/CSS/JS without polluting the main window environment.
+### ArtifactPanel.jsx
+Split-screen code panel triggered by AI code block responses:
+- **Monaco Editor**: Real-time code editing in-browser.
+- **Sandboxed iframe Preview**: Renders HTML/CSS/JS output in a sandboxed `<iframe>` using `srcDoc`.
 
-### 2. Subscriptions ([BillingDrawer.jsx](file:///e:/01%20Major%20Project/Multi_agent/zen-ai/frontend/src/components/BillingDrawer.jsx))
-Integrated directly with Razorpay SDK:
-- Fetches checkout payload (Order ID, Amount, Currency) from the backend.
-- Opens the native Razorpay payment screen.
-- Handles success callbacks, submitting the checkout response to `/api/billing/verify` for validation.
+### BillingDrawer.jsx
+Razorpay-integrated subscription flow:
+- Fetches Order ID from backend.
+- Opens native Razorpay checkout.
+- Submits payment response to `/api/billing/verify-payment`.
 
-### 3. Responsive Shell Layout ([App.jsx](file:///e:/01%20Major%20Project/Multi_agent/zen-ai/frontend/src/App.jsx))
-Combines the [Navbar](file:///e:/01%20Major%20Project/Multi_agent/zen-ai/frontend/src/components/Navbar.jsx) and collapsible [Sidebar](file:///e:/01%20Major%20Project/Multi_agent/zen-ai/frontend/src/components/Sidebar.jsx) with main chat areas. The layout adapts dynamically when artifacts are activated, shrinking the chat area to display a split panel.
-
----
-
-## ðŸ“Š State Management (Redux)
-
-The project leverages Redux Toolkit ([store.js](file:///e:/01%20Major%20Project/Multi_agent/zen-ai/frontend/src/redux/store.js)) for high-frequency user actions:
-- **`userSlice`**: Tracks whether a user is logged in, their JWT token, user metadata, and subscription details.
-- **`conversationSlice`**: Tracks available chat threads, active thread indicators, and handles naming updates.
-- **`messageSlice`**: Stores the chronological array of active messages in the current conversation thread.
+### App.jsx
+Core shell combining Navbar, collapsible Sidebar, ChatArea, and ArtifactPanel. Layout adapts dynamically on artifact activation.
 
 ---
 
-## ðŸ“¡ API Integration Layer
+## State Management
 
-All API requests pass through the custom [axios.js](file:///e:/01%20Major%20Project/Multi_agent/zen-ai/frontend/src/utils/axios.js) client which implements:
-- Base configuration linking to `VITE_SERVER_URL`.
-- An interceptor that reads the Firebase ID Token (JWT) from local state or cookies, attaching it automatically under the `Authorization: Bearer <Token>` header for all backend communication.
+Redux Toolkit slices:
+- **`userSlice`**: Login state, user metadata, plan/credits.
+- **`conversationSlice`**: Thread list, active thread.
+- **`messageSlice`**: Active conversation messages + artifacts.
 
+---
+
+## API Integration
+
+Custom `axios.js` client:
+- Base URL from `VITE_SERVER_URL`.
+- Interceptor attaches Firebase ID Token as `Authorization: Bearer <token>` on every request.
