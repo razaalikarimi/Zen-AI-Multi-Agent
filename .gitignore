@@ -1,0 +1,74 @@
+# Root level .gitignore for Zen AI monorepo
+
+# ========================
+# Node.js / NPM
+# ========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+package-lock.json
+
+# ========================
+# Environment Variables (NEVER commit secrets)
+# ========================
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# ========================
+# Build Outputs
+# ========================
+dist/
+build/
+.vite/
+
+# ========================
+# Logs
+# ========================
+logs/
+*.log
+
+# ========================
+# OS Files
+# ========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ========================
+# IDE / Editor
+# ========================
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ========================
+# Temporary / Cache
+# ========================
+temp_redis.json
+.cache/
+.temp/
+
+# ========================
+# Firebase Service Account Key (sensitive!)
+# ========================
+serviceAccount.json
+*serviceAccount*.json
+
+# ========================
+# Uploads (runtime generated files)
+# ========================
+uploads/
+
+# ========================
+# Docker volumes
+# ========================
+docker-data/
