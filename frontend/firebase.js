@@ -6,12 +6,9 @@ import { getAuth, GithubAuthProvider, GoogleAuthProvider } from "firebase/auth";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey:import.meta.env.VITE_FIREBASE_API_KEY ,
-  // authDomain: add your auth domain,
-  // projectId: add your project id,
-  // storageBucket: add your storage bucket,
-  // messagingSenderId: add your,
-  // appId: add your
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: "zen-ai-1db15.firebaseapp.com",
+  projectId: "zen-ai-1db15",
 };
 
 // Initialize Firebase
