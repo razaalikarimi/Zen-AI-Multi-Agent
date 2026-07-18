@@ -1,4 +1,4 @@
-﻿# ========================
+# ========================
 # Node.js / NPM
 # ========================
 node_modules/
@@ -59,6 +59,8 @@ temp_redis.json
 .cache/
 .temp/
 uploads/
+useless/
+
 
 # ========================
 # Sensitive Files
