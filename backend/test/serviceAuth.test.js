@@ -52,3 +52,4 @@ test("Service-to-Service HMAC Security: Reject Expired or Tampered Signatures", 
   requireServiceAuth(tamperedReq, mockRes, () => {});
   assert.equal(statusCode, 403, "Tampered signature must return HTTP 403 Forbidden");
 });
+

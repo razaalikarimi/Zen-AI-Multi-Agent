@@ -32,3 +32,4 @@ jobs:
           file: ./backend/gateway/Dockerfile
           push: false
           tags: zen-ai/gateway:${{ github.sha }}
+

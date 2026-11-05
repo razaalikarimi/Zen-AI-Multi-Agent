@@ -66,3 +66,4 @@ jobs:
           node -e "import('./backend/services/chat/index.js').then(() => { console.log('✅ Chat service verified'); process.exit(0); }).catch(e => { console.error(e); process.exit(1); })"
           node -e "import('./backend/services/billing/index.js').then(() => { console.log('✅ Billing service verified'); process.exit(0); }).catch(e => { console.error(e); process.exit(1); })"
           node -e "import('./backend/services/agent/index.js').then(() => { console.log('✅ Agent service verified'); process.exit(0); }).catch(e => { console.error(e); process.exit(1); })"
+

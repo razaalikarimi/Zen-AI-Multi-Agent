@@ -29,3 +29,4 @@ jobs:
 
       - name: Audit Frontend
         run: npm --prefix frontend audit --audit-level=high || true
+

@@ -42,3 +42,4 @@ test("Redis Infrastructure: Atomic Increment", async () => {
   assert.equal(val2, 2, "Second increment should be 2");
   await redis.del(counterKey);
 });
+

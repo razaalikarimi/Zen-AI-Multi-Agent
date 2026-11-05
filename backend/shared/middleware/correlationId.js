@@ -20,3 +20,4 @@ export const correlationIdMiddleware = (req, res, next) => {
 };
 
 export default correlationIdMiddleware;
+

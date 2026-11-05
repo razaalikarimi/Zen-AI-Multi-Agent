@@ -37,3 +37,4 @@ test("Supervisor Router: Intent Heuristics (Code, Plan, Research)", async () => 
   const routedCode = await routerNode(codeState);
   assert.equal(routedCode.agent, "coding", "Write code inquiry must route to coding");
 });
+

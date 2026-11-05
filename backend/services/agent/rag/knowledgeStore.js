@@ -176,3 +176,4 @@ export class KnowledgeStore {
 
 export const knowledgeStore = new KnowledgeStore();
 export default knowledgeStore;
+
