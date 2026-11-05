@@ -1,29 +1,29 @@
 import express from "express";
-
 import {
-    deductCredits,
- login,
- logout,
- updatePlan
-}
-from "../controllers/auth.controllers.js";
+  deductCredits,
+  login,
+  logout,
+  updatePlan,
+  getAdminOverview,
+  listUsers,
+  updateUserRole,
+} from "../controllers/auth.controllers.js";
+import { requireServiceAuth } from "../../../shared/middleware/serviceAuth.js";
 
-const router =
-express.Router();
+const router = express.Router();
 
-router.post("/login",login);
-router.get("/logout",logout);
-router.patch(
-    "/internal/update-plan",
-    updatePlan
-);
-router.patch(
+// Public Auth Endpoints
+router.post("/login", login);
+router.get("/logout", logout);
+router.post("/logout", logout);
 
-"/internal/deduct-credits",
+// Internal Microservice Operations (Protected via HMAC service authentication)
+router.patch("/internal/update-plan", requireServiceAuth, updatePlan);
+router.patch("/internal/deduct-credits", requireServiceAuth, deductCredits);
 
-deductCredits
-
-);
-
+// Admin Operations (Gateway enforces requireRole('admin'))
+router.get("/admin/overview", getAdminOverview);
+router.get("/admin/users", listUsers);
+router.patch("/admin/users/:id/role", updateUserRole);
 
 export default router;

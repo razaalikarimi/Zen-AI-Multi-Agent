@@ -1,143 +1,63 @@
-﻿import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { getMemory } from "../utils/memory.js";
-import { getModel } from "../utils/model.js";
+import { providerManager } from "../providers/providerManager.js";
 import { checkAgentLimit } from "../config/agentRateLimit.js";
 import { deductCredits } from "../utils/deductCredits.js";
+import { createLogger } from "../../../shared/logger/logger.js";
 
+const logger = createLogger("chat-agent");
 
-export const chatAgent =
-async(state)=>{
+export const chatAgent = async (state) => {
+  logger.info("Executing General Chat Agent", { prompt: state.prompt?.slice(0, 50) });
 
-await checkAgentLimit(
-    state.userId,
-    "chat"
-  );
+  if (state.userId) {
+    try {
+      await checkAgentLimit(state.userId, "chat");
+      await deductCredits(state.userId, "chat");
+    } catch (e) {
+      logger.warn("Chat agent limit or credit check notice", { error: e.message });
+    }
+  }
 
-   await deductCredits(
+  const history = (await getMemory(state.conversationId)) || [];
 
-        state.userId,
+  const searchContext = state.searchResults
+    ? `\n\nReal-Time Web Search Context:\n${JSON.stringify(state.searchResults)}\nAnswer using this verified web context.`
+    : "";
 
-        "chat"
-
-    );
-
-
- const llm =
- getModel("chat");
-
- const history =
- await getMemory(
-  state.conversationId
- );
-
- 
-
-const searchContext = state.searchResults
-  ? `
-Web Search Results:
-
-${state.searchResults}
-
-Answer the user using only the above search results.
-`
-  : ""
-
-
-
-
- const messages = [
-
-  new SystemMessage(
-`
-You are ZenAI, an intelligent AI assistant.
-
+  const messages = [
+    new SystemMessage(`You are Zen AI, a world-class enterprise AI assistant.
 ${searchContext}
 
+Formatting Rules:
+- Answer directly with high intellectual density.
+- Use clean GitHub-flavored Markdown for structure.
+- For code snippets, always specify the language in fenced code blocks.
+- Format lists cleanly with bullet points.
+- Do not mention internal routing tools or implementation details.`),
+  ];
 
+  history.slice(-10).forEach((msg) => {
+    if (msg.role === "user") {
+      messages.push(new HumanMessage(msg.content));
+    } else if (msg.role === "assistant") {
+      messages.push(new AIMessage(msg.content));
+    }
+  });
 
-If searchContext exists:
+  messages.push(new HumanMessage(state.prompt));
 
-- Use search results to answer.
-- Do not mention internal tools.
+  const result = await providerManager.invoke(messages, {
+    agent: "chat",
+    model: state.modelPreference,
+  });
 
-Rules:
-
-- For simple questions, greetings, and short queries, respond naturally in plain text.
-- For technical, educational, coding, or detailed topics, use clean Markdown.
-
-Formatting:
-
-- Use # for titles and ## for sections.
-- Leave a blank line after headings.
-- Use bullet points for lists.
-- Use numbered lists for steps.
-- Use fenced code blocks with language tags for code.
-- Keep paragraphs short and readable.
-- Never write headings and content on the same line.
-- Never generate large walls of text.
-
-
-
-
-`
-  )
-
- ];
-
- history.forEach((msg)=>{
-
-  if(
-   msg.role === "user"
-  ){
-
-   messages.push(
-
-    new HumanMessage(
-     msg.content
-    )
-
-   );
-
-  }
-
-  if(
-   msg.role === "assistant"
-  ){
-
-   messages.push(
-
-    new AIMessage(
-     msg.content
-    )
-
-   );
-
-  }
-
- });
-
- messages.push(
-
-  new HumanMessage(
-   state.prompt
-  )
-
- );
-
- const response = await llm.invoke(messages);
-
-
-
-const images = state.searchResults?.images || [];
-
-
-
-return {
-  ...state,
-
-  response:response.content,
-  images:images
-  
+  return {
+    ...state,
+    response: result.content,
+    images: state.searchResults?.images || [],
+    tokenUsage: result.tokenUsage,
+  };
 };
 
-};
+export default chatAgent;

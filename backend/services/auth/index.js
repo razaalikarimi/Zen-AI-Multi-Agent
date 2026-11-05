@@ -1,25 +1,51 @@
 import express from "express";
 import cors from "cors";
-import connectDB from "./config/db.js";
 import dotenv from "dotenv";
+import connectDB from "./config/db.js";
 import router from "./routes/auth.routes.js";
+import correlationIdMiddleware from "../../shared/middleware/correlationId.js";
+import errorHandler from "../../shared/middleware/errorHandler.js";
+import { createLogger } from "../../shared/logger/logger.js";
+
 dotenv.config();
+
+const logger = createLogger("auth-service");
 const app = express();
+const port = process.env.PORT || 8001;
+
 app.use(express.json());
-const port=process.env.PORT 
+app.use(correlationIdMiddleware);
 
+// Health Probes
+app.get("/health/live", (req, res) => {
+  res.status(200).json({ status: "live", service: "auth", timestamp: new Date().toISOString() });
+});
 
+app.get("/health/ready", (req, res) => {
+  res.status(200).json({ status: "ready", service: "auth", timestamp: new Date().toISOString() });
+});
 
 app.get("/", (req, res) => {
-  res.status(200).json({
-    service: "auth",
-    status: "ok"
+  res.status(200).json({ service: "auth", status: "ok" });
+});
+
+app.use("/", router);
+app.use(errorHandler);
+
+const server = app.listen(port, async () => {
+  await connectDB();
+  logger.info(`Auth service running on port ${port}`);
+});
+
+const gracefulShutdown = (signal) => {
+  logger.info(`Received ${signal}. Shutting down auth service...`);
+  server.close(() => {
+    logger.info("Auth service HTTP server closed.");
+    process.exit(0);
   });
-});
-app.use("/",router)
-app.listen(port, () => {
-    connectDB()
-  console.log(
-    `auth service running on ${port}`
-  );
-});
+};
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
+export default app;

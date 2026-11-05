@@ -1,0 +1,26 @@
+{
+  "name": "zen-ai-multi-agent-platform",
+  "version": "2.0.0",
+  "description": "Enterprise-Grade Multi-Agent AI Orchestration Platform",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "install:all": "npm --prefix backend/gateway install && npm --prefix backend/services/auth install && npm --prefix backend/services/chat install && npm --prefix backend/services/billing install && npm --prefix backend/services/agent install && npm --prefix frontend install",
+    "dev": "node run-project.js",
+    "build:frontend": "npm --prefix frontend run build",
+    "lint": "npm --prefix frontend run lint",
+    "test": "npm --prefix backend/gateway test && npm --prefix backend/services/chat test && npm --prefix backend/services/auth test"
+  },
+  "keywords": [
+    "multi-agent",
+    "langgraph",
+    "langchain",
+    "enterprise-ai",
+    "rag",
+    "qdrant",
+    "gemini",
+    "groq"
+  ],
+  "author": "Zen AI Engineering Team",
+  "license": "ISC"
+}

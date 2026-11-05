@@ -1,144 +1,245 @@
-import Conversation
-from "../models/conversation.model.js";
+import Conversation from "../models/conversation.model.js";
+import Message from "../models/message.model.js";
+import { createLogger } from "../../../shared/logger/logger.js";
+import { sendSuccess, sendError } from "../../../shared/utils/response.js";
 
-export const createConversation =async(req,res)=>{
+const logger = createLogger("chat-controller");
 
- try{
- const userId =req.headers["x-user-id"];
- console.log("userId",userId)
-  const conversation =await Conversation.create({
-   userId:userId
-  });
+export const createConversation = async (req, res) => {
+  try {
+    const userId = req.headers["x-user-id"];
+    if (!userId) {
+      return sendError(res, "Missing user identification", 401, "UNAUTHORIZED");
+    }
 
-  res.json(
-   conversation
-  );
+    const { title, folder, agentPreference, modelPreference } = req.body || {};
 
- }catch(error){
+    const conversation = await Conversation.create({
+      userId,
+      title: title || "New Chat",
+      folder: folder || "General",
+      agentPreference: agentPreference || "auto",
+      modelPreference: modelPreference || "gemini",
+    });
 
-  res.status(500).json({
-   message:error.message
-  });
+    logger.info(`Created conversation: ${conversation._id} for user ${userId}`);
+    return res.status(201).json(conversation);
+  } catch (error) {
+    logger.error("Create conversation failed", { error: error.message });
+    return sendError(res, error.message, 500, "INTERNAL_ERROR");
+  }
+};
 
- }
+export const getConversations = async (req, res) => {
+  try {
+    const userId = req.headers["x-user-id"];
+    if (!userId) {
+      return sendError(res, "Missing user identification", 401, "UNAUTHORIZED");
+    }
 
-}
+    const { search, folder, pinned } = req.query;
+    const filter = { userId };
 
+    if (search) {
+      filter.$text = { $search: search };
+    }
+    if (folder) {
+      filter.folder = folder;
+    }
+    if (pinned === "true") {
+      filter.isPinned = true;
+    }
 
-export const getConversations =async(req,res)=>{
+    const conversations = await Conversation.find(filter).sort({
+      isPinned: -1,
+      updatedAt: -1,
+    });
 
- try{
- const userId =req.headers["x-user-id"];
-  const conversations =await Conversation.find({
+    return res.json(conversations);
+  } catch (error) {
+    logger.error("Get conversations failed", { error: error.message });
+    return sendError(res, error.message, 500, "INTERNAL_ERROR");
+  }
+};
 
-   userId:userId
+export const getMessages = async (req, res) => {
+  try {
+    const userId = req.headers["x-user-id"];
+    const conversationId = req.params.id || req.params.conversationId;
 
-  })
-  .sort({
-   updatedAt:-1
-  });
+    if (!userId) {
+      return sendError(res, "Missing user identification", 401, "UNAUTHORIZED");
+    }
 
-  res.json(
-   conversations
-  );
+    // Anti-IDOR Security Guard: Verify conversation ownership
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      userId,
+    });
 
- }catch(error){
+    if (!conversation) {
+      return sendError(
+        res,
+        "Conversation not found or access denied",
+        404,
+        "NOT_FOUND_OR_FORBIDDEN"
+      );
+    }
 
-  res.status(500).json({
-   message:error.message
-  });
+    const messages = await Message.find({
+      conversationId,
+    }).sort({
+      createdAt: 1,
+    });
 
- }
+    return res.json(messages);
+  } catch (error) {
+    logger.error("Get messages failed", { error: error.message });
+    return sendError(res, error.message, 500, "INTERNAL_ERROR");
+  }
+};
 
-}
+export const saveMessage = async (req, res) => {
+  try {
+    const userId = req.headers["x-user-id"];
+    const {
+      conversationId,
+      role,
+      content,
+      reasoning,
+      agent,
+      images,
+      artifacts,
+      sources,
+      tokenUsage,
+    } = req.body;
 
-import Message
-from "../models/message.model.js";
+    if (!conversationId || !role) {
+      return sendError(res, "Missing required message fields", 400, "VALIDATION_ERROR");
+    }
 
-export const saveMessage =async(req,res)=>{
+    // Verify conversation exists
+    if (userId) {
+      const conversation = await Conversation.findOne({ _id: conversationId, userId });
+      if (!conversation) {
+        return sendError(res, "Conversation ownership mismatch", 403, "FORBIDDEN");
+      }
+    }
 
- try{
+    const message = await Message.create({
+      conversationId,
+      role,
+      content: content || "",
+      reasoning: reasoning || "",
+      agent: agent || "auto",
+      images: images || [],
+      artifacts: artifacts || [],
+      sources: sources || [],
+      tokenUsage: tokenUsage || {},
+    });
 
-  const {
-   conversationId,
-   role,
-   content,
-   images,
-  artifacts
-  } = req.body;
+    // Touch conversation updatedAt timestamp
+    await Conversation.findByIdAndUpdate(conversationId, {
+      updatedAt: new Date(),
+    });
 
-  const message =await Message.create({
+    return res.status(201).json(message);
+  } catch (error) {
+    logger.error("Save message failed", { error: error.message });
+    return sendError(res, error.message, 500, "INTERNAL_ERROR");
+  }
+};
 
-   conversationId,
+export const updateConversation = async (req, res) => {
+  try {
+    const userId = req.headers["x-user-id"];
+    const conversationId = req.params.id || req.body.conversationId;
+    const { title, isPinned, folder } = req.body;
 
-   role,
-  images,
-   content,
-   artifacts:
-  artifacts || []
+    if (!userId) {
+      return sendError(res, "Missing user identification", 401, "UNAUTHORIZED");
+    }
 
-  });
+    // Anti-IDOR: Check ownership
+    const updateFields = {};
+    if (typeof title === "string") updateFields.title = title.trim();
+    if (typeof isPinned === "boolean") updateFields.isPinned = isPinned;
+    if (typeof folder === "string") updateFields.folder = folder.trim();
 
-  res.json(
-   message
-  );
+    const conversation = await Conversation.findOneAndUpdate(
+      { _id: conversationId, userId },
+      { $set: updateFields },
+      { new: true }
+    );
 
- }catch(error){
+    if (!conversation) {
+      return sendError(res, "Conversation not found or unauthorized", 404, "NOT_FOUND");
+    }
 
-  res.status(500).json({
-   message:error.message
-  });
+    return res.json(conversation);
+  } catch (error) {
+    logger.error("Update conversation failed", { error: error.message });
+    return sendError(res, error.message, 500, "INTERNAL_ERROR");
+  }
+};
 
- }
+export const deleteConversation = async (req, res) => {
+  try {
+    const userId = req.headers["x-user-id"];
+    const conversationId = req.params.id;
 
-}
+    if (!userId) {
+      return sendError(res, "Missing user identification", 401, "UNAUTHORIZED");
+    }
 
+    // Anti-IDOR: Delete only if user owns it
+    const conversation = await Conversation.findOneAndDelete({
+      _id: conversationId,
+      userId,
+    });
 
+    if (!conversation) {
+      return sendError(res, "Conversation not found or unauthorized", 404, "NOT_FOUND");
+    }
 
-export const getMessages =async(req,res)=>{
+    // Clean up all messages
+    await Message.deleteMany({ conversationId });
+    logger.info(`Deleted conversation: ${conversationId} and its messages`);
 
- try{
+    return sendSuccess(res, { message: "Conversation deleted successfully" });
+  } catch (error) {
+    logger.error("Delete conversation failed", { error: error.message });
+    return sendError(res, error.message, 500, "INTERNAL_ERROR");
+  }
+};
 
-  const messages =await Message.find({
+export const updateMessageFeedback = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating, comment } = req.body;
 
-   conversationId:
-   req.params.id
+    const message = await Message.findByIdAndUpdate(
+      id,
+      { feedback: { rating, comment } },
+      { new: true }
+    );
 
-  })
-  .sort({
-   createdAt:1
-  });
+    if (!message) {
+      return sendError(res, "Message not found", 404, "NOT_FOUND");
+    }
 
-  res.json(
-   messages
-  );
+    return sendSuccess(res, { message });
+  } catch (error) {
+    return sendError(res, error.message, 500, "INTERNAL_ERROR");
+  }
+};
 
- }catch(error){
-
-  res.status(500).json({
-   message:error.message
-  });
-
- }
-
-}
-
-
-export const updateConversation=async (req,res)=>{
-try {
-    const {conversationId,title}=req.body
-    const conversation=await Conversation.findByIdAndUpdate( conversationId,{
-        title
-    })
-     res.json(
-   conversation
-  );
-
- }catch(error){
-
-  res.status(500).json({
-   message:error.message
-  });
-
-}
-}
+export default {
+  createConversation,
+  getConversations,
+  getMessages,
+  saveMessage,
+  updateConversation,
+  deleteConversation,
+  updateMessageFeedback,
+};

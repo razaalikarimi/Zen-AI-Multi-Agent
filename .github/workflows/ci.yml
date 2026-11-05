@@ -1,0 +1,68 @@
+name: Continuous Integration & Verification
+
+on:
+  push:
+    branches: [main, feature/**, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    name: Code Quality & Automated Tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+
+      - name: Cache Monorepo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            frontend/node_modules
+            backend/node_modules
+            backend/gateway/node_modules
+            backend/services/auth/node_modules
+            backend/services/chat/node_modules
+            backend/services/agent/node_modules
+            backend/services/billing/node_modules
+          key: ${{ runner.os }}-zen-deps-${{ hashFiles('**/package*.json') }}
+          restore-keys: |
+            ${{ runner.os }}-zen-deps-
+
+      - name: Install Dependencies Across Services
+        run: |
+          npm --prefix backend install
+          npm --prefix backend/gateway install
+          npm --prefix backend/services/auth install
+          npm --prefix backend/services/chat install
+          npm --prefix backend/services/billing install
+          npm --prefix backend/services/agent install
+          npm --prefix frontend install
+
+      - name: Build Frontend Application
+        run: |
+          npm --prefix frontend run build
+
+      - name: Run Backend Integration & Smoke Tests
+        env:
+          NODE_ENV: test
+          ALLOW_DEV_MOCK_LOGIN: true
+          DISABLE_SERVICE_AUTH: true
+        run: |
+          node -e "import('./backend/gateway/index.js').then(() => { console.log('✅ Gateway verified'); process.exit(0); }).catch(e => { console.error(e); process.exit(1); })"
+          node -e "import('./backend/services/auth/index.js').then(() => { console.log('✅ Auth service verified'); process.exit(0); }).catch(e => { console.error(e); process.exit(1); })"
+          node -e "import('./backend/services/chat/index.js').then(() => { console.log('✅ Chat service verified'); process.exit(0); }).catch(e => { console.error(e); process.exit(1); })"
+          node -e "import('./backend/services/billing/index.js').then(() => { console.log('✅ Billing service verified'); process.exit(0); }).catch(e => { console.error(e); process.exit(1); })"
+          node -e "import('./backend/services/agent/index.js').then(() => { console.log('✅ Agent service verified'); process.exit(0); }).catch(e => { console.error(e); process.exit(1); })"

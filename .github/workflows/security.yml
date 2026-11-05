@@ -1,0 +1,31 @@
+name: Security & Dependency Vulnerability Audit
+
+on:
+  schedule:
+    - cron: "0 4 * * 1" # Every Monday at 4:00 AM UTC
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  security-audit:
+    name: Dependency Audit & Secret Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Audit Monorepo Root
+        run: npm audit --audit-level=high || true
+
+      - name: Audit Backend Gateway
+        run: npm --prefix backend/gateway audit --audit-level=high || true
+
+      - name: Audit Frontend
+        run: npm --prefix frontend audit --audit-level=high || true

@@ -1,159 +1,70 @@
-﻿import fs from "fs";
-import {PDFParse} from "pdf-parse";
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { createVectorStore } from "../utils/vectorStore.js";
-import {
-  HumanMessage,
-  SystemMessage
-} from "@langchain/core/messages";
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { knowledgeStore } from "../rag/knowledgeStore.js";
+import { providerManager } from "../providers/providerManager.js";
+import { createLogger } from "../../../shared/logger/logger.js";
 
-import { getModel }
-from "../utils/model.js";
-import { QdrantVectorStore } from "@langchain/qdrant";
+const logger = createLogger("pdf-rag-agent");
+
 export const pdfRagAgent = async (state) => {
+  logger.info("Executing PDF/Document RAG Agent", {
+    prompt: state.prompt?.slice(0, 50),
+    hasFile: !!state.file,
+  });
 
   try {
-
-    const buffer =
-      fs.readFileSync(
-        state.file.path
+    // 1. If a file was uploaded in this turn, ingest it persistently
+    if (state.file) {
+      await knowledgeStore.ingestFile(
+        state.file.path,
+        state.file.originalname,
+        state.file.mimetype,
+        state.userId || "anonymous"
       );
+    }
 
-    const pdf =
-      new PDFParse({
+    // 2. Retrieve relevant context from user's persistent knowledge base
+    const relevantDocs = await knowledgeStore.searchKnowledge(
+      state.prompt,
+      state.userId || "anonymous",
+      5
+    );
 
-        data: buffer
+    const context = relevantDocs.map((doc) => doc.pageContent).join("\n\n---\n\n");
+    const citations = relevantDocs.map((doc) => ({
+      title: doc.metadata?.filename || "Uploaded Document",
+      snippet: doc.pageContent.slice(0, 150),
+      chunkIndex: doc.metadata?.chunkIndex,
+    }));
 
-      });
-
-    const result =
-      await pdf.getText();
-
-    const text =
-      result.text;
-
-    const splitter =
-      new RecursiveCharacterTextSplitter({
-
-        chunkSize: 1000,
-
-        chunkOverlap: 200
-
-      });
-
-    const docs =
-      await splitter.createDocuments([
-
-        text
-
-      ]);
-
-   const collectionName =
-`pdf-${Date.now()}`;
-
-const vectorStore =await createVectorStore(
-
-collectionName,
-
-docs
-
-);
-
-const relevantDocs =
-await vectorStore.similaritySearch(
-
-    state.prompt,
-
-    5
-
-);
-console.log(relevantDocs);
-const context =
-relevantDocs
-
-.map(doc=>doc.pageContent)
-
-.join("\n\n");
-const llm =getModel("pdf-rag");
-
-    const messages=[
-
-new SystemMessage(`
-
-You are ZenAI PDF Assistant.
+    const messages = [
+      new SystemMessage(`You are the Zen AI Enterprise Knowledge & Document RAG Agent.
+Answer the user's inquiry based strictly on the provided document context.
 
 Rules:
+- Cite exact excerpts or sections where possible.
+- If the answer is not present in the context, clearly state: "I could not find information about that in the uploaded documents."
+- Use Markdown formatting with headings and bullet points.`),
+      new HumanMessage(`Document Context:\n${context || "No context found."}\n\nUser Question:\n${state.prompt}`),
+    ];
 
-- Answer ONLY from the uploaded PDF.
-
-- Never make up information.
-
-- If the answer is not present in the PDF, reply:
-
-"I couldn't find this information in the uploaded PDF."
-
-- Use Markdown formatting.
-
-`),
-
-new HumanMessage(`
-
-Context:
-
-${context}
-
-Question:
-
-${state.prompt}
-
-`)
-];
-
-
-const response =
-await llm.invoke(
-    messages
-);
-
+    const result = await providerManager.invoke(messages, {
+      agent: "document-rag",
+      model: state.modelPreference,
+    });
 
     return {
-
       ...state,
-
-      docs,
-
-      response:
-response.content
+      response: result.content,
+      sources: citations,
+      tokenUsage: result.tokenUsage,
     };
-
-    
-
-
-
+  } catch (error) {
+    logger.error("RAG Agent execution failed", { error: error.message });
+    return {
+      ...state,
+      response: `Failed to process document context: ${error.message}`,
+    };
   }
-
- finally{
-
-    try{
-
-        fs.unlinkSync(
-            state.file.path
-        );
-
-        await QdrantVectorStore.deleteCollection(
-
-            collectionName
-
-        );
-
-    }
-
-    catch(err){
-
-        console.log(err.message);
-
-    }
-
-}
-
 };
+
+export default pdfRagAgent;

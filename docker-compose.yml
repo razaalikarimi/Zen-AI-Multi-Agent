@@ -1,0 +1,194 @@
+version: "3.8"
+
+services:
+  # Infrastructure: Redis
+  redis:
+    image: redis:7-alpine
+    container_name: zen-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - zen-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Infrastructure: MongoDB
+  mongodb:
+    image: mongo:7.0
+    container_name: zen-mongodb
+    ports:
+      - "27017:27017"
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - zen-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Infrastructure: Qdrant Vector Store
+  qdrant:
+    image: qdrant/qdrant:v1.9.0
+    container_name: zen-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    restart: unless-stopped
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - zen-network
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./backend
+      dockerfile: services/auth/Dockerfile
+    container_name: zen-auth
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+      - MONGODB_URL=mongodb://mongodb:27017/zen_auth
+      - REDIS_URL=redis://redis:6379
+      - INTERNAL_SERVICE_SECRET=zen-internal-cluster-secret-key-2025
+      - NODE_ENV=development
+      - ALLOW_DEV_MOCK_LOGIN=true
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - zen-network
+
+  # Chat Service
+  chat-service:
+    build:
+      context: ./backend
+      dockerfile: services/chat/Dockerfile
+    container_name: zen-chat
+    ports:
+      - "8002:8002"
+    environment:
+      - PORT=8002
+      - MONGODB_URL=mongodb://mongodb:27017/zen_chat
+      - INTERNAL_SERVICE_SECRET=zen-internal-cluster-secret-key-2025
+      - NODE_ENV=development
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - zen-network
+
+  # Billing Service
+  billing-service:
+    build:
+      context: ./backend
+      dockerfile: services/billing/Dockerfile
+    container_name: zen-billing
+    ports:
+      - "8004:8004"
+    environment:
+      - PORT=8004
+      - MONGODB_URL=mongodb://mongodb:27017/zen_billing
+      - AUTH_SERVICE=http://auth-service:8001
+      - INTERNAL_SERVICE_SECRET=zen-internal-cluster-secret-key-2025
+      - NODE_ENV=development
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - zen-network
+
+  # Multi-Agent Orchestrator Service
+  agent-service:
+    build:
+      context: ./backend
+      dockerfile: services/agent/Dockerfile
+    container_name: zen-agent
+    ports:
+      - "8003:8003"
+    environment:
+      - PORT=8003
+      - MONGODB_URL=mongodb://mongodb:27017/zen_agent
+      - REDIS_URL=redis://redis:6379
+      - CHAT_SERVICE=http://chat-service:8002
+      - AUTH_SERVICE=http://auth-service:8001
+      - GATEWAY_URL=http://gateway:8000
+      - QDRANT_URL=http://qdrant:6333
+      - INTERNAL_SERVICE_SECRET=zen-internal-cluster-secret-key-2025
+      - NODE_ENV=development
+    depends_on:
+      redis:
+        condition: service_healthy
+      chat-service:
+        condition: service_started
+    networks:
+      - zen-network
+
+  # API Gateway
+  gateway:
+    build:
+      context: ./backend
+      dockerfile: gateway/Dockerfile
+    container_name: zen-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - REDIS_URL=redis://redis:6379
+      - AUTH_SERVICE=http://auth-service:8001
+      - CHAT_SERVICE=http://chat-service:8002
+      - AGENT_SERVICE=http://agent-service:8003
+      - BILLING_SERVICE=http://billing-service:8004
+      - FRONTEND_URL=http://localhost:5173
+      - INTERNAL_SERVICE_SECRET=zen-internal-cluster-secret-key-2025
+      - NODE_ENV=development
+    depends_on:
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      chat-service:
+        condition: service_started
+      agent-service:
+        condition: service_started
+      billing-service:
+        condition: service_started
+    networks:
+      - zen-network
+
+  # Frontend SPA
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: zen-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - gateway
+    networks:
+      - zen-network
+
+volumes:
+  redis_data:
+  mongo_data:
+  qdrant_data:
+
+networks:
+  zen-network:
+    driver: bridge

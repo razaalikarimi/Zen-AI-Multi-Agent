@@ -1,59 +1,73 @@
 import Redis from "ioredis";
 import dotenv from "dotenv";
+import { createLogger } from "../logger/logger.js";
 
 dotenv.config();
 
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+const logger = createLogger("redis");
+const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const realRedis = new Redis(process.env.REDIS_URL);
 let isConnected = false;
+let realRedis = null;
 
-realRedis.on("connect", () => {
-  isConnected = true;
-  console.log("✅ Redis Connected");
-});
+try {
+  realRedis = new Redis(redisUrl, {
+    maxRetriesPerRequest: 1,
+    retryStrategy(times) {
+      if (times > 3) {
+        return null; // Stop trying indefinitely in offline environments
+      }
+      return Math.min(times * 100, 2000);
+    },
+    lazyConnect: true,
+  });
 
-realRedis.on("error", (err) => {
-  isConnected = false;
-  console.error("⚠️ Redis Connection Warning (Redis is offline):", err.message);
-});
+  realRedis.on("connect", () => {
+    isConnected = true;
+    logger.info("Connected to Redis server", { url: redisUrl });
+  });
 
-// File path for shared session/data store
-const storePath = path.resolve(__dirname, "../../../temp_redis.json");
+  realRedis.on("ready", () => {
+    isConnected = true;
+  });
 
-function readDb() {
-  try {
-    if (fs.existsSync(storePath)) {
-      return JSON.parse(fs.readFileSync(storePath, "utf8") || "{}");
-    }
-  } catch (err) {
-    // Ignore read errors in local dev
-  }
-  return {};
+  realRedis.on("error", (err) => {
+    isConnected = false;
+    // Log as warn so offline local dev does not fail loudly
+    logger.warn("Redis client warning", { error: err.message });
+  });
+
+  // Attempt non-blocking connection
+  realRedis.connect().catch(() => {
+    logger.warn("Redis unavailable, activating robust in-memory fallback tier.");
+  });
+} catch (e) {
+  logger.warn("Redis initialization skipped, activating in-memory fallback.", { error: e.message });
 }
 
-function writeDb(data) {
-  try {
-    const dir = path.dirname(storePath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(storePath, JSON.stringify(data, null, 2), "utf8");
-  } catch (err) {
-    // Ignore write errors in local dev
+// In-memory memory map for zero-dependency local dev / test resilience
+const memoryStore = new Map();
+const ttlTimers = new Map();
+
+function setMemory(key, value, mode, duration) {
+  memoryStore.set(key, String(value));
+  if (ttlTimers.has(key)) {
+    clearTimeout(ttlTimers.get(key));
+    ttlTimers.delete(key);
+  }
+  if (mode === "EX" && duration) {
+    const timer = setTimeout(() => {
+      memoryStore.delete(key);
+      ttlTimers.delete(key);
+    }, duration * 1000);
+    ttlTimers.set(key, timer);
   }
 }
 
-// Wrapper object that intercepts calls
-const redisProxy = new Proxy(realRedis, {
+const redisProxy = new Proxy(realRedis || {}, {
   get(target, prop) {
-    // If the database is connected, we use the real Redis client
-    if (isConnected) {
+    // If Redis is active and connected, delegate
+    if (isConnected && target && typeof target[prop] !== "undefined") {
       const val = target[prop];
       if (typeof val === "function") {
         return val.bind(target);
@@ -61,77 +75,96 @@ const redisProxy = new Proxy(realRedis, {
       return val;
     }
 
-    // Otherwise, we intercept common Redis commands and execute them on a shared JSON file
+    // High-performance In-Memory Fallback implementations
     if (prop === "get") {
       return async (key) => {
-        const db = readDb();
-        const val = db[key];
-        return val !== undefined ? val : null;
+        return memoryStore.has(key) ? memoryStore.get(key) : null;
       };
     }
+
     if (prop === "set") {
       return async (key, value, mode, duration) => {
-        const db = readDb();
-        db[key] = value;
-        writeDb(db);
-        if (mode === "EX" && duration) {
-          setTimeout(() => {
-            try {
-              const currentDb = readDb();
-              delete currentDb[key];
-              writeDb(currentDb);
-            } catch (e) {}
-          }, duration * 1000);
-        }
+        setMemory(key, value, mode, duration);
         return "OK";
       };
     }
+
     if (prop === "del") {
       return async (key) => {
-        const db = readDb();
-        if (key in db) {
-          delete db[key];
-          writeDb(db);
-          return 1;
+        if (ttlTimers.has(key)) {
+          clearTimeout(ttlTimers.get(key));
+          ttlTimers.delete(key);
         }
-        return 0;
+        return memoryStore.delete(key) ? 1 : 0;
       };
     }
+
     if (prop === "exists") {
-      return async (key) => {
-        const db = readDb();
-        return key in db ? 1 : 0;
-      };
+      return async (key) => (memoryStore.has(key) ? 1 : 0);
     }
+
     if (prop === "incr") {
       return async (key) => {
-        const db = readDb();
-        const val = parseInt(db[key] || "0", 10) + 1;
-        db[key] = String(val);
-        writeDb(db);
-        return val;
-      };
-    }
-    if (prop === "decr") {
-      return async (key) => {
-        const db = readDb();
-        const val = parseInt(db[key] || "0", 10) - 1;
-        db[key] = String(val);
-        writeDb(db);
+        const val = parseInt(memoryStore.get(key) || "0", 10) + 1;
+        memoryStore.set(key, String(val));
         return val;
       };
     }
 
-    // Default fallback for any other methods to prevent crash
-    const originalVal = target[prop];
-    if (typeof originalVal === "function") {
-      return async (...args) => {
-        console.warn(`⚠️ Redis offline: Mocked execution of method '${String(prop)}'`);
-        return null;
+    if (prop === "decr") {
+      return async (key) => {
+        const val = parseInt(memoryStore.get(key) || "0", 10) - 1;
+        memoryStore.set(key, String(val));
+        return val;
       };
     }
-    return originalVal;
-  }
+
+    if (prop === "expire") {
+      return async (key, seconds) => {
+        if (!memoryStore.has(key)) return 0;
+        if (ttlTimers.has(key)) clearTimeout(ttlTimers.get(key));
+        const timer = setTimeout(() => {
+          memoryStore.delete(key);
+          ttlTimers.delete(key);
+        }, seconds * 1000);
+        ttlTimers.set(key, timer);
+        return 1;
+      };
+    }
+
+    if (prop === "ttl") {
+      return async () => 60; // Approximate fallback TTL
+    }
+
+    if (prop === "acquireLock") {
+      return async (lockKey, ttlSeconds = 10) => {
+        if (isConnected && target?.set) {
+          const res = await target.set(`lock:${lockKey}`, "locked", "NX", "EX", ttlSeconds);
+          return res === "OK";
+        }
+        const fullKey = `lock:${lockKey}`;
+        if (memoryStore.has(fullKey)) return false;
+        setMemory(fullKey, "locked", "EX", ttlSeconds);
+        return true;
+      };
+    }
+
+    if (prop === "releaseLock") {
+      return async (lockKey) => {
+        if (isConnected && target?.del) {
+          return await target.del(`lock:${lockKey}`);
+        }
+        return memoryStore.delete(`lock:${lockKey}`) ? 1 : 0;
+      };
+    }
+
+    if (prop === "status") {
+      return isConnected ? "ready" : "in-memory-fallback";
+    }
+
+    // Default safe fallback for methods like quit, disconnect, etc.
+    return async () => null;
+  },
 });
 
 export default redisProxy;

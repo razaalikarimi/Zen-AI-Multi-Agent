@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   Plus, MessageSquare, LogOut, User, PenSquare, Menu, X, CoinsIcon, Cpu,
-  Sparkles, ChevronRight
+  Sparkles, ChevronRight, LayoutDashboard, Code2, Database, BarChart3,
+  Settings, ShieldAlert, Layers
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import api from "../utils/axios";
@@ -13,21 +15,51 @@ import { setArtifacts, setMessages } from "../redux/message.slice";
 import BillingDrawer from "./BillingDrawer";
 import { motion, AnimatePresence } from "framer-motion";
 
+const NAV_ITEMS = [
+  { path: "/chat", label: "AI Chat", icon: MessageSquare },
+  { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { path: "/agents", label: "Agents", icon: Layers },
+  { path: "/artifacts", label: "Code Studio", icon: Code2 },
+  { path: "/knowledge", label: "Knowledge Base", icon: Database },
+  { path: "/analytics", label: "Analytics", icon: BarChart3 },
+  { path: "/billing", label: "Billing & Plans", icon: CoinsIcon },
+  { path: "/settings", label: "Settings", icon: Settings },
+];
+
 function CollapsedRail({ onExpand, onNewChat, conversations, selectedConversation, onSelect, userData }) {
+  const location = useLocation();
   return (
     <div className="hidden lg:flex flex-col items-center w-[56px] h-screen py-4 gap-1 shrink-0"
       style={{ background: "#ffffff", borderRight: "1px solid rgba(0,0,0,0.07)", boxShadow: "2px 0 8px rgba(0,0,0,0.04)" }}>
-      <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-2 cursor-pointer" onClick={onExpand}
+      <Link to="/" className="w-8 h-8 rounded-xl flex items-center justify-center mb-2 cursor-pointer text-decoration-none"
         style={{ background: "linear-gradient(135deg, #0891b2, #0d9488)", boxShadow: "0 4px 12px rgba(8,145,178,0.3)" }}>
         <Cpu size={15} className="text-white" />
-      </div>
-      <button onClick={onNewChat}
+      </Link>
+      <button onClick={onNewChat} title="New Chat"
         className="flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-150 cursor-pointer border-none"
-        style={{ background: "transparent", color: "#94a3b8" }}
-        onMouseEnter={e => { e.currentTarget.style.background = "rgba(8,145,178,0.06)"; e.currentTarget.style.color = "#0891b2"; }}
-        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94a3b8"; }}>
+        style={{ background: "transparent", color: "#94a3b8" }}>
         <Plus size={16} />
       </button>
+
+      <div className="flex flex-col items-center gap-1 my-2">
+        {NAV_ITEMS.slice(0, 5).map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              title={item.label}
+              className={`flex items-center justify-center w-8 h-8 rounded-lg transition ${
+                isActive ? "bg-[#0891b2]/10 text-[#0891b2]" : "text-[#94a3b8] hover:text-[#0f172a]"
+              }`}
+            >
+              <Icon size={14} />
+            </Link>
+          );
+        })}
+      </div>
+
       <div className="flex-1 flex flex-col items-center gap-1 overflow-y-auto w-full px-2 mt-1">
         {conversations.map((chat) => {
           const isActive = selectedConversation?._id === chat._id;
@@ -46,10 +78,10 @@ function CollapsedRail({ onExpand, onNewChat, conversations, selectedConversatio
       </div>
       {userData && (
         <div className="mt-auto">
-          <div className="w-8 h-8 rounded-[8px] flex items-center justify-center"
+          <Link to="/settings" className="w-8 h-8 rounded-[8px] flex items-center justify-center text-decoration-none"
             style={{ background: "#f1f5f9", border: "1px solid rgba(0,0,0,0.07)" }}>
             <User size={13} style={{ color: "#94a3b8" }} />
-          </div>
+          </Link>
         </div>
       )}
     </div>
@@ -57,6 +89,7 @@ function CollapsedRail({ onExpand, onNewChat, conversations, selectedConversatio
 }
 
 export default function Sidebar() {
+  const location = useLocation();
   const [hovered, setHovered] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -113,11 +146,10 @@ export default function Sidebar() {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-
       {/* Header */}
       <div className="flex items-center gap-2.5 px-4 py-4 shrink-0"
         style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+        <Link to="/" className="flex items-center gap-2 flex-1 min-w-0 text-decoration-none">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
             style={{ background: "linear-gradient(135deg, #0891b2, #0d9488)", boxShadow: "0 4px 10px rgba(8,145,178,0.3)" }}>
             <Cpu size={13} className="text-white" />
@@ -127,13 +159,11 @@ export default function Sidebar() {
             style={{ color: "#0891b2", background: "rgba(8,145,178,0.08)", border: "1px solid rgba(8,145,178,0.15)" }}>
             {userData?.plan ?? "Free"}
           </span>
-        </div>
+        </Link>
         <div className="flex items-center gap-1">
           <button onClick={() => setCollapsed(true)}
             className="hidden lg:flex items-center justify-center w-6 h-6 rounded-md transition-all duration-150 bg-transparent border-none cursor-pointer"
-            style={{ color: "#94a3b8" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#475569"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94a3b8"; }}>
+            style={{ color: "#94a3b8" }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="9" y1="3" x2="9" y2="21" />
             </svg>
@@ -145,15 +175,13 @@ export default function Sidebar() {
           </button>
           <button onClick={handleCreateConversation}
             className="flex items-center justify-center w-6 h-6 rounded-md transition-all duration-150 bg-transparent border-none cursor-pointer"
-            style={{ color: "#94a3b8" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(8,145,178,0.06)"; e.currentTarget.style.color = "#0891b2"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94a3b8"; }}>
+            style={{ color: "#94a3b8" }}>
             <PenSquare size={13} />
           </button>
         </div>
       </div>
 
-      {/* New Chat */}
+      {/* New Chat Button */}
       <div className="px-3 pt-3 pb-2 shrink-0">
         <button onClick={handleCreateConversation}
           className="w-full flex items-center justify-center gap-2 text-[13px] font-semibold rounded-xl py-[9px] border-none cursor-pointer transition-all duration-200 btn-primary">
@@ -162,14 +190,49 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* Section label */}
-      <div className="px-4 pt-2 pb-1.5 shrink-0">
-        <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#cbd5e1" }}>
-          {conversations.length === 0 ? "No conversations yet" : "Recent"}
+      {/* Main App Navigation */}
+      <div className="px-3 py-1.5 shrink-0 space-y-0.5 border-b border-black/[0.05]">
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12.5px] font-medium transition text-decoration-none ${
+                isActive
+                  ? "bg-[#0891b2]/10 text-[#0891b2] font-semibold"
+                  : "text-[#64748b] hover:bg-[#f8fafc] hover:text-[#0f172a]"
+              }`}
+            >
+              <Icon size={14} />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+
+        {userData?.role === "admin" && (
+          <Link
+            to="/admin"
+            className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12.5px] font-medium transition text-decoration-none ${
+              location.pathname === "/admin"
+                ? "bg-[#fee2e2] text-[#ef4444] font-semibold"
+                : "text-[#ef4444] hover:bg-[#fee2e2]/40"
+            }`}
+          >
+            <ShieldAlert size={14} />
+            <span>Admin Console</span>
+          </Link>
+        )}
+      </div>
+
+      {/* Recent Chats Section */}
+      <div className="px-4 pt-3 pb-1 shrink-0">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#94a3b8]">
+          {conversations.length === 0 ? "No threads yet" : "Recent Conversations"}
         </p>
       </div>
 
-      {/* Chat list */}
       <div className="flex-1 overflow-y-auto px-2 pb-2">
         <AnimatePresence>
           {conversations.map((chat, i) => {
@@ -178,83 +241,66 @@ export default function Sidebar() {
             return (
               <motion.div key={chat._id}
                 initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.2, delay: i * 0.03 }}
+                transition={{ duration: 0.2, delay: i * 0.02 }}
                 onClick={() => handleSelectConversation(chat)}
                 onMouseEnter={() => setHovered(chat._id)}
                 onMouseLeave={() => setHovered(null)}
-                className="flex items-center gap-2.5 cursor-pointer mb-0.5 px-3 py-2.5 rounded-[10px] transition-all duration-150"
+                className="flex items-center gap-2.5 cursor-pointer mb-0.5 px-3 py-2 rounded-[10px] transition-all duration-150"
                 style={{
                   background: isActive ? "rgba(8,145,178,0.08)" : isHov ? "rgba(0,0,0,0.03)" : "transparent",
                   border: isActive ? "1px solid rgba(8,145,178,0.18)" : "1px solid transparent",
                 }}>
-                <div className="flex items-center justify-center shrink-0 w-[26px] h-[26px] rounded-lg"
+                <div className="flex items-center justify-center shrink-0 w-[24px] h-[24px] rounded-lg"
                   style={{
                     background: isActive ? "rgba(8,145,178,0.12)" : "#f1f5f9",
                     color: isActive ? "#0891b2" : "#94a3b8",
                   }}>
-                  <MessageSquare size={12} />
+                  <MessageSquare size={11} />
                 </div>
-                <p className="text-[12.5px] font-medium truncate flex-1"
+                <p className="text-[12px] font-medium truncate flex-1"
                   style={{ color: isActive ? "#0f172a" : "#64748b" }}>
                   {chat.title}
                 </p>
-                {isActive && <ChevronRight size={11} style={{ color: "#0891b2", opacity: 0.6 }} />}
               </motion.div>
             );
           })}
         </AnimatePresence>
       </div>
 
-      {/* Divider */}
-      <div className="mx-3 h-px shrink-0" style={{ background: "rgba(0,0,0,0.06)" }} />
-
-      {/* Footer */}
-      <div className="px-3 py-3 shrink-0">
+      {/* User Footer */}
+      <div className="px-3 py-3 shrink-0 border-t border-black/[0.06]">
         {userData ? (
-          <div className="flex items-center gap-2.5 cursor-pointer rounded-xl px-3 py-2.5 transition-all duration-150"
-            onMouseEnter={e => { e.currentTarget.style.background = "#f8fafc"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+          <div className="flex items-center gap-2.5 rounded-xl px-2.5 py-2">
             <div className="relative shrink-0">
               {!userData?.avatar || imageError ? (
-                <div className="w-9 h-9 rounded-[10px] flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg, rgba(8,145,178,0.12), rgba(13,148,136,0.12))", border: "1px solid rgba(8,145,178,0.2)" }}>
-                  <User size={14} style={{ color: "#0891b2" }} />
+                <div className="w-8 h-8 rounded-[10px] flex items-center justify-center bg-[#0891b2]/10 text-[#0891b2]">
+                  <User size={13} />
                 </div>
               ) : (
                 <img src={userData.avatar} alt={userData.name}
-                  className="w-9 h-9 rounded-[10px] object-cover"
-                  style={{ border: "2px solid rgba(8,145,178,0.25)" }}
+                  className="w-8 h-8 rounded-[10px] object-cover border border-[#0891b2]/30"
                   onError={() => setImageError(true)} />
               )}
-              <span className="absolute -bottom-px -right-px w-[9px] h-[9px] rounded-full block"
-                style={{ background: "#10b981", border: "2px solid #ffffff" }} />
+              <span className="absolute -bottom-px -right-px w-[8px] h-[8px] rounded-full bg-[#10b981] border-2 border-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-semibold truncate" style={{ color: "#0f172a" }}>{userData.name}</p>
-              <p className="text-[11px] mt-px" style={{ color: "#94a3b8" }}>{userData.plan || "Free Plan"}</p>
+              <p className="text-[12.5px] font-semibold truncate text-[#0f172a]">{userData.name}</p>
+              <p className="text-[10.5px] text-[#94a3b8]">{userData.plan || "Free"} Plan • {userData.credits ?? 100} cr</p>
             </div>
             <div className="flex gap-1">
-              <button onClick={() => setShowBilling(true)}
-                className="flex items-center justify-center w-7 h-7 rounded-lg border-none bg-transparent cursor-pointer transition-all duration-150"
-                style={{ color: "#f59e0b" }}
-                onMouseEnter={e => e.currentTarget.style.background = "rgba(245,158,11,0.08)"}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                <CoinsIcon size={14} />
-              </button>
+              <Link to="/settings" className="p-1.5 rounded-lg text-[#94a3b8] hover:text-[#0f172a] hover:bg-[#f1f5f9] transition">
+                <Settings size={14} />
+              </Link>
               <button onClick={logout}
-                className="flex items-center justify-center w-7 h-7 rounded-lg border-none bg-transparent cursor-pointer transition-all duration-150"
-                style={{ color: "#94a3b8" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.06)"; e.currentTarget.style.color = "#ef4444"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94a3b8"; }}>
-                <LogOut size={13} />
+                className="p-1.5 rounded-lg border-none bg-transparent cursor-pointer text-[#94a3b8] hover:text-[#ef4444] hover:bg-[#fee2e2]/40 transition">
+                <LogOut size={14} />
               </button>
             </div>
           </div>
         ) : (
-          <button className="w-full flex items-center justify-center gap-2 text-[13px] font-semibold rounded-xl py-[10px] cursor-pointer border-none btn-primary">
-            <Sparkles size={13} />
-            Sign In
-          </button>
+          <Link to="/login" className="w-full flex items-center justify-center gap-2 text-[13px] font-semibold rounded-xl py-[10px] text-white btn-primary text-decoration-none">
+            <Sparkles size={13} /> Sign In
+          </Link>
         )}
       </div>
     </div>
@@ -263,8 +309,7 @@ export default function Sidebar() {
   return (
     <>
       <button onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-3.5 left-4 z-50 flex items-center justify-center w-8 h-8 rounded-lg cursor-pointer"
-        style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", color: "#64748b", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+        className="lg:hidden fixed top-3.5 left-4 z-50 flex items-center justify-center w-8 h-8 rounded-lg cursor-pointer bg-white border border-black/[0.08] text-[#64748b]">
         <Menu size={15} />
       </button>
 
@@ -272,8 +317,7 @@ export default function Sidebar() {
         {mobileOpen && (
           <motion.div key="backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => setMobileOpen(false)}
-            className="lg:hidden fixed inset-0 z-40"
-            style={{ background: "rgba(0,0,0,0.3)", backdropFilter: "blur(4px)" }} />
+            className="lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" />
         )}
       </AnimatePresence>
 
@@ -282,12 +326,8 @@ export default function Sidebar() {
         w-[268px] h-screen shrink-0
         transition-transform duration-250
         ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-      `}
-        style={{
-          background: "#ffffff",
-          borderRight: "1px solid rgba(0,0,0,0.07)",
-          boxShadow: "2px 0 16px rgba(0,0,0,0.05)",
-        }}>
+        bg-white border-r border-black/[0.07]
+      `}>
         <SidebarContent />
       </div>
 
