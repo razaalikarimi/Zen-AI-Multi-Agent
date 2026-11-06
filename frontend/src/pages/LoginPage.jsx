@@ -16,11 +16,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const loginWithToken = async (token) => {
+  const loginWithToken = async (token, userEmail) => {
     try {
       setLoading(true);
       setError(null);
-      const { data } = await api.post("/api/auth/login", { token });
+      const { data } = await api.post("/api/auth/login", { 
+        token, 
+        email: userEmail || email 
+      });
+      if (data?.sessionId) {
+        localStorage.setItem("zen_session", data.sessionId);
+      }
       dispatch(setUserData(data.user));
       navigate("/chat");
     } catch (err) {
@@ -34,21 +40,20 @@ export default function LoginPage() {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const token = await result.user.getIdToken();
-      await loginWithToken(token);
+      await loginWithToken(token, result.user.email);
     } catch (err) {
       setError(err.message || "Google authentication failed");
     }
   };
 
   const handleDemoLogin = async () => {
-    await loginWithToken("mock-user-token");
+    await loginWithToken("demo-token", "developer@zen.ai");
   };
 
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     if (!email) return;
-    // Fast login demo bypass for local development
-    await loginWithToken("mock-user-token");
+    await loginWithToken("demo-token", email);
   };
 
   return (

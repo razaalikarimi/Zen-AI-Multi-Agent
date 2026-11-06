@@ -103,8 +103,12 @@ export default function Sidebar() {
   const logout = async () => {
     try {
       await api.get("/api/auth/logout");
+      localStorage.removeItem("zen_session");
       dispatch(setUserData(null));
-    } catch (error) { console.log(error); }
+    } catch (error) { 
+      localStorage.removeItem("zen_session");
+      console.log(error); 
+    }
   };
 
   useEffect(() => {

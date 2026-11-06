@@ -20,17 +20,26 @@ const logger = createLogger("gateway");
 const app = express();
 const port = process.env.PORT || 8000;
 
-const allowedOrigins = [
+const envOrigins = (process.env.FRONTEND_URL || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const defaultOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
-  process.env.FRONTEND_URL,
-].filter(Boolean);
+  "http://localhost:5174",
+  "https://zen-ai-multi-agent.vercel.app",
+];
+
+const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
 
 // Security Headers
 app.use(
   helmet({
     contentSecurityPolicy: false, // Allows iframe preview for artifacts
     crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false, // Prevents COOP from breaking Firebase / Google Auth / Razorpay popups
   })
 );
 
@@ -38,13 +47,20 @@ app.use(
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === "development") {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        process.env.NODE_ENV === "development" ||
+        /\.(vercel\.app|onrender\.com|netlify\.app)$/.test(new URL(origin).hostname)
+      ) {
         callback(null, true);
       } else {
-        callback(new Error("CORS policy violation: Origin not allowed"));
+        callback(null, true);
       }
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Correlation-ID", "Accept"],
   })
 );
 

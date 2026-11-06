@@ -6,13 +6,17 @@ import redis from "../../shared/redis/redis.js";
  */
 export const protect = async (req, res, next) => {
   try {
-    let sessionId = req.cookies?.session;
+    let sessionId;
 
-    if (!sessionId && req.headers.authorization) {
+    if (req.headers.authorization) {
       const parts = req.headers.authorization.split(" ");
       if (parts.length === 2 && (parts[0] === "Bearer" || parts[0] === "Session")) {
         sessionId = parts[1];
       }
+    }
+
+    if (!sessionId) {
+      sessionId = req.cookies?.session;
     }
 
     if (!sessionId) {

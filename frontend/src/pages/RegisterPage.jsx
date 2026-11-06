@@ -14,13 +14,25 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [error, setError] = useState(null);
+
   const handleRegister = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     try {
-      const { data } = await api.post("/api/auth/login", { token: "mock-user-token" });
-      dispatch(setUserData({ ...data.user, name }));
+      const { data } = await api.post("/api/auth/login", { 
+        token: "demo-token", 
+        email, 
+        name 
+      });
+      if (data?.sessionId) {
+        localStorage.setItem("zen_session", data.sessionId);
+      }
+      dispatch(setUserData(data.user));
       navigate("/chat");
+    } catch (err) {
+      setError(err.response?.data?.error?.message || err.message || "Failed to register");
     } finally {
       setLoading(false);
     }
@@ -41,6 +53,11 @@ export default function RegisterPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
         <div className="bg-[#111827] py-8 px-6 shadow-2xl rounded-2xl border border-white/[0.08] sm:px-10 space-y-5">
+          {error && (
+            <div className="p-3.5 rounded-xl bg-[#fee2e2]/10 border border-[#ef4444]/20 text-[#ef4444] text-[13px]">
+              {error}
+            </div>
+          )}
           <form onSubmit={handleRegister} className="space-y-4">
             <div>
               <label className="block text-[12.5px] font-medium text-[#94a3b8] mb-1">Full Name</label>
