@@ -6,7 +6,7 @@ COPY package*.json ./
 COPY shared ./shared
 COPY services/auth/package*.json ./services/auth/
 
-RUN npm --prefix services/auth ci --omit=dev
+RUN npm --prefix services/auth install --omit=dev
 
 FROM node:20-alpine AS runner
 

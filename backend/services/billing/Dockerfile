@@ -6,7 +6,7 @@ COPY package*.json ./
 COPY shared ./shared
 COPY services/billing/package*.json ./services/billing/
 
-RUN npm --prefix services/billing ci --omit=dev
+RUN npm --prefix services/billing install --omit=dev
 
 FROM node:20-alpine AS runner
 

@@ -6,7 +6,7 @@ COPY package*.json ./
 COPY shared ./shared
 COPY gateway/package*.json ./gateway/
 
-RUN npm --prefix gateway ci --omit=dev
+RUN npm --prefix gateway install --omit=dev
 
 FROM node:20-alpine AS runner
 

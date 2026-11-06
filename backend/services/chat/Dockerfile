@@ -6,7 +6,7 @@ COPY package*.json ./
 COPY shared ./shared
 COPY services/chat/package*.json ./services/chat/
 
-RUN npm --prefix services/chat ci --omit=dev
+RUN npm --prefix services/chat install --omit=dev
 
 FROM node:20-alpine AS runner
 

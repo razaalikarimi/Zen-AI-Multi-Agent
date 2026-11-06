@@ -6,7 +6,7 @@ COPY package*.json ./
 COPY shared ./shared
 COPY services/agent/package*.json ./services/agent/
 
-RUN npm --prefix services/agent ci --omit=dev
+RUN npm --prefix services/agent install --omit=dev
 
 FROM node:20-alpine AS runner
 
