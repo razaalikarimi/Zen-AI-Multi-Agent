@@ -15,13 +15,14 @@ ENV NODE_ENV=production
 ENV PORT=8000
 ENV NODE_PATH=/app/node_modules
 
-# Security: Non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S appuser -u 1001
 
 COPY --from=builder /app/gateway/node_modules ./node_modules
 COPY --from=builder /app/gateway/node_modules ./gateway/node_modules
 COPY shared ./shared
 COPY gateway ./gateway
+
+RUN mkdir -p /app/gateway/uploads && chown -R appuser:nodejs /app
 
 USER appuser
 EXPOSE 8000

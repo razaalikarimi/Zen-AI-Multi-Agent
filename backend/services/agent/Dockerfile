@@ -22,6 +22,8 @@ COPY --from=builder /app/services/agent/node_modules ./services/agent/node_modul
 COPY shared ./shared
 COPY services/agent ./services/agent
 
+RUN mkdir -p /app/services/agent/temp && chown -R appuser:nodejs /app
+
 USER appuser
 EXPOSE 8003
 

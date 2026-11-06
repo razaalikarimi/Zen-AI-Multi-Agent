@@ -22,6 +22,8 @@ COPY --from=builder /app/services/chat/node_modules ./services/chat/node_modules
 COPY shared ./shared
 COPY services/chat ./services/chat
 
+RUN chown -R appuser:nodejs /app
+
 USER appuser
 EXPOSE 8002
 

@@ -22,6 +22,8 @@ COPY --from=builder /app/services/billing/node_modules ./services/billing/node_m
 COPY shared ./shared
 COPY services/billing ./services/billing
 
+RUN chown -R appuser:nodejs /app
+
 USER appuser
 EXPOSE 8004
 

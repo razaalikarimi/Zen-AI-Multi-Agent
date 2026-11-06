@@ -2,6 +2,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { s3 } from "./s3.js";
 import fs from "fs/promises";
 import path from "path";
+import os from "os";
 import { createLogger } from "../../../shared/logger/logger.js";
 
 const logger = createLogger("storage-upload");
@@ -31,11 +32,16 @@ export const uploadToS3 = async (buffer, fileName, contentType) => {
 
   // Resilient Local Storage Fallback
   try {
-    const uploadDir = path.resolve(process.cwd(), "../../gateway/uploads/generated");
-    await fs.mkdir(uploadDir, { recursive: true });
+    let uploadDir = path.resolve(process.cwd(), "../../gateway/uploads/generated");
+    try {
+      await fs.mkdir(uploadDir, { recursive: true });
+    } catch (mkdirErr) {
+      uploadDir = path.join(os.tmpdir(), "zen-generated");
+      await fs.mkdir(uploadDir, { recursive: true });
+    }
     const targetPath = path.join(uploadDir, fileName);
     await fs.writeFile(targetPath, buffer);
-    logger.info(`Saved generated file to local storage: ${targetPath}`);
+    logger.info(`Saved generated file to storage: ${targetPath}`);
     return fileName;
   } catch (err) {
     logger.error("Failed to save generated file locally", { error: err.message });

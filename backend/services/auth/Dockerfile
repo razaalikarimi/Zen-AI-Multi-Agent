@@ -22,6 +22,8 @@ COPY --from=builder /app/services/auth/node_modules ./services/auth/node_modules
 COPY shared ./shared
 COPY services/auth ./services/auth
 
+RUN chown -R appuser:nodejs /app
+
 USER appuser
 EXPOSE 8001
 
