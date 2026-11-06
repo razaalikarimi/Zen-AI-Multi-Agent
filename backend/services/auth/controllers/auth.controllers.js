@@ -77,26 +77,45 @@ export const login = async (req, res) => {
       }
     }
 
-    let user = await User.findOne({
-      $or: [{ firebaseUid: decoded.uid }, { email: decoded.email?.toLowerCase() }],
-    });
+    let user = null;
+    try {
+      user = await User.findOne({
+        $or: [{ firebaseUid: decoded.uid }, { email: decoded.email?.toLowerCase() }],
+      });
 
-    if (!user) {
-      user = await User.create({
+      if (!user) {
+        user = await User.create({
+          firebaseUid: decoded.uid,
+          email: decoded.email?.toLowerCase(),
+          name: decoded.name || "Zen User",
+          avatar: decoded.picture || "https://avatar.iran.liara.run/public/38",
+          provider: decoded.firebase?.sign_in_provider || "google.com",
+          role: decoded.email === "developer@zen.ai" ? "admin" : "user",
+          plan: "free",
+          credits: 100,
+          totalCredits: 100,
+        });
+        logger.info(`Created new user account: ${user.email} (${user._id})`);
+      } else if (!user.firebaseUid && decoded.uid) {
+        user.firebaseUid = decoded.uid;
+        await user.save();
+      }
+    } catch (dbError) {
+      logger.warn("Database unavailable during login, utilizing resilient session profile", {
+        error: dbError.message,
+      });
+
+      user = {
+        _id: decoded.uid || "user-" + Date.now(),
         firebaseUid: decoded.uid,
-        email: decoded.email?.toLowerCase(),
+        email: decoded.email?.toLowerCase() || "developer@zen.ai",
         name: decoded.name || "Zen User",
         avatar: decoded.picture || "https://avatar.iran.liara.run/public/38",
-        provider: decoded.firebase?.sign_in_provider || "google.com",
         role: decoded.email === "developer@zen.ai" ? "admin" : "user",
         plan: "free",
         credits: 100,
         totalCredits: 100,
-      });
-      logger.info(`Created new user account: ${user.email} (${user._id})`);
-    } else if (!user.firebaseUid && decoded.uid) {
-      user.firebaseUid = decoded.uid;
-      await user.save();
+      };
     }
 
     const sessionId = crypto.randomUUID();

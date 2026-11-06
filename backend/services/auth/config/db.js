@@ -3,17 +3,30 @@ import { createLogger } from "../../../shared/logger/logger.js";
 
 const logger = createLogger("auth-db");
 
+let isConnected = false;
+
 const connectDB = async () => {
-  const mongoUrl = process.env.MONGODB_URL || "mongodb://localhost:27017/zen_auth";
+  const mongoUrl =
+    process.env.MONGODB_URL ||
+    process.env.MONGO_URI ||
+    process.env.MONGODB_URI ||
+    process.env.DATABASE_URL ||
+    "mongodb://localhost:27017/zen_auth";
+
   try {
+    mongoose.set("bufferCommands", false);
     await mongoose.connect(mongoUrl, {
       serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
       maxPoolSize: 10,
     });
+    isConnected = true;
     logger.info("MongoDB connected successfully for Auth Service");
   } catch (error) {
+    isConnected = false;
     logger.warn("MongoDB connection warning for Auth Service", { error: error.message });
   }
 };
 
+export const getDBStatus = () => isConnected;
 export default connectDB;
