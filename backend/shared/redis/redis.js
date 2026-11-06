@@ -1,8 +1,4 @@
-import Redis from "ioredis";
-import dotenv from "dotenv";
 import { createLogger } from "../logger/logger.js";
-
-dotenv.config();
 
 const logger = createLogger("redis");
 const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
@@ -11,36 +7,46 @@ let isConnected = false;
 let realRedis = null;
 
 try {
-  realRedis = new Redis(redisUrl, {
-    maxRetriesPerRequest: 1,
-    retryStrategy(times) {
-      if (times > 3) {
-        return null; // Stop trying indefinitely in offline environments
-      }
-      return Math.min(times * 100, 2000);
-    },
-    lazyConnect: true,
-  });
+  let Redis = null;
+  try {
+    const mod = await import("ioredis");
+    Redis = mod.default || mod;
+  } catch (modErr) {
+    logger.info("Optional ioredis module not present in runtime. Activating resilient in-memory tier.");
+  }
 
-  realRedis.on("connect", () => {
-    isConnected = true;
-    logger.info("Connected to Redis server", { url: redisUrl });
-  });
+  if (Redis && process.env.REDIS_URL) {
+    realRedis = new Redis(redisUrl, {
+      maxRetriesPerRequest: 1,
+      retryStrategy(times) {
+        if (times > 3) {
+          return null; // Stop trying indefinitely in offline environments
+        }
+        return Math.min(times * 100, 2000);
+      },
+      lazyConnect: true,
+    });
 
-  realRedis.on("ready", () => {
-    isConnected = true;
-  });
+    realRedis.on("connect", () => {
+      isConnected = true;
+      logger.info("Connected to Redis server", { url: redisUrl });
+    });
 
-  realRedis.on("error", (err) => {
-    isConnected = false;
-    // Log as warn so offline local dev does not fail loudly
-    logger.warn("Redis client warning", { error: err.message });
-  });
+    realRedis.on("ready", () => {
+      isConnected = true;
+    });
 
-  // Attempt non-blocking connection
-  realRedis.connect().catch(() => {
-    logger.warn("Redis unavailable, activating robust in-memory fallback tier.");
-  });
+    realRedis.on("error", (err) => {
+      isConnected = false;
+      // Log as warn so offline local dev does not fail loudly
+      logger.warn("Redis client warning", { error: err.message });
+    });
+
+    // Attempt non-blocking connection
+    realRedis.connect().catch(() => {
+      logger.warn("Redis unavailable, activating robust in-memory fallback tier.");
+    });
+  }
 } catch (e) {
   logger.warn("Redis initialization skipped, activating in-memory fallback.", { error: e.message });
 }

@@ -1,7 +1,4 @@
 import crypto from "crypto";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 const CLUSTER_SECRET = process.env.INTERNAL_SERVICE_SECRET || "zen-internal-cluster-secret-key-2025";
 const MAX_DRIFT_SECONDS = 120; // 2 minute clock-drift tolerance

@@ -13,9 +13,11 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8003
+ENV NODE_PATH=/app/node_modules
 
 RUN addgroup -g 1001 -S nodejs && adduser -S appuser -u 1001
 
+COPY --from=builder /app/services/agent/node_modules ./node_modules
 COPY --from=builder /app/services/agent/node_modules ./services/agent/node_modules
 COPY shared ./shared
 COPY services/agent ./services/agent
