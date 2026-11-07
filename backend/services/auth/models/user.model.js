@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema(
     },
     avatar: {
       type: String,
-      default: "https://avatar.iran.liara.run/public/38",
+      default: "https://ui-avatars.com/api/?name=User&background=0891b2&color=fff",
     },
     role: {
       type: String,

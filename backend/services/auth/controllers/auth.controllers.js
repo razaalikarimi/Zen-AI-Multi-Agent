@@ -5,6 +5,7 @@ import redis from "../../../shared/redis/redis.js";
 import { app } from "../config/firebase.js";
 import { createLogger } from "../../../shared/logger/logger.js";
 import { sendSuccess, sendError } from "../../../shared/utils/response.js";
+import { signSessionToken } from "../../../shared/utils/sessionToken.js";
 
 const logger = createLogger("auth-controller");
 
@@ -88,7 +89,7 @@ export const login = async (req, res) => {
           firebaseUid: decoded.uid,
           email: decoded.email?.toLowerCase(),
           name: decoded.name || "Zen User",
-          avatar: decoded.picture || "https://avatar.iran.liara.run/public/38",
+          avatar: decoded.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(decoded.name || "Zen User")}&background=0891b2&color=fff`,
           provider: decoded.firebase?.sign_in_provider || "google.com",
           role: decoded.email === "developer@zen.ai" ? "admin" : "user",
           plan: "free",
@@ -110,15 +111,13 @@ export const login = async (req, res) => {
         firebaseUid: decoded.uid,
         email: decoded.email?.toLowerCase() || "developer@zen.ai",
         name: decoded.name || "Zen User",
-        avatar: decoded.picture || "https://avatar.iran.liara.run/public/38",
+        avatar: decoded.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(decoded.name || "Zen User")}&background=0891b2&color=fff`,
         role: decoded.email === "developer@zen.ai" ? "admin" : "user",
         plan: "free",
         credits: 100,
         totalCredits: 100,
       };
     }
-
-    const sessionId = crypto.randomUUID();
 
     const sessionPayload = {
       userId: user._id.toString(),
@@ -132,9 +131,14 @@ export const login = async (req, res) => {
     };
 
     const sessionDurationSeconds = 60 * 60 * 24 * 7; // 7 days
+    const sessionId = signSessionToken(sessionPayload, sessionDurationSeconds);
 
-    await redis.set(`user-session:${user._id}`, sessionId, "EX", sessionDurationSeconds);
-    await redis.set(`session:${sessionId}`, JSON.stringify(sessionPayload), "EX", sessionDurationSeconds);
+    try {
+      await redis.set(`user-session:${user._id}`, sessionId, "EX", sessionDurationSeconds);
+      await redis.set(`session:${sessionId}`, JSON.stringify(sessionPayload), "EX", sessionDurationSeconds);
+    } catch (redisErr) {
+      // Redis optional in serverless/free tiers; stateless token handles cluster auth
+    }
 
     res.cookie("session", sessionId, {
       httpOnly: true,

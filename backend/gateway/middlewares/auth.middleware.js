@@ -1,4 +1,5 @@
 import redis from "../../shared/redis/redis.js";
+import { verifySessionToken } from "../../shared/utils/sessionToken.js";
 
 /**
  * Enterprise Authentication Middleware for API Gateway
@@ -33,14 +34,30 @@ export const protect = async (req, res, next) => {
       });
     }
 
-    const sessionData = await redis.get(`session:${sessionId}`);
+    let user = null;
 
-    if (!sessionData) {
+    // 1. Fast-path: Check Redis distributed session cache
+    try {
+      const sessionData = await redis.get(`session:${sessionId}`);
+      if (sessionData) {
+        user = typeof sessionData === "string" ? JSON.parse(sessionData) : sessionData;
+      }
+    } catch (redisErr) {
+      // Redis optional in serverless/free tiers
+    }
+
+    // 2. Resilient fallback: Stateless cryptographic HMAC verification
+    // Guarantees authentication works across separate containers/microservices without requiring shared Redis
+    if (!user) {
+      user = verifySessionToken(sessionId);
+    }
+
+    if (!user) {
       return res.status(401).json({
         success: false,
         error: {
           code: "SESSION_EXPIRED",
-          message: "Your session has expired. Please log in again.",
+          message: "Your session has expired or is invalid. Please log in again.",
         },
         meta: {
           correlationId: req.correlationId,
@@ -49,7 +66,7 @@ export const protect = async (req, res, next) => {
       });
     }
 
-    req.user = typeof sessionData === "string" ? JSON.parse(sessionData) : sessionData;
+    req.user = user;
     next();
   } catch (error) {
     return res.status(500).json({
