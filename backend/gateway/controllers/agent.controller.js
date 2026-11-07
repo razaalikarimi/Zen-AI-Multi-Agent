@@ -9,10 +9,96 @@ const logger = createLogger("gateway-agent");
  * Intelligent AI synthesis using Gemini REST API, Groq, or resilient contextual generator.
  */
 async function callLLM({ prompt, file, modelPreference }) {
+  const openaiKey = process.env.OPENAI_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   const groqKey = process.env.GROQ_API_KEY;
 
-  // 1. Google Gemini 2.5 Flash (Supports Multimodal PDF & Image natively)
+  // 1. OpenAI (GPT-4o / GPT-4o-mini)
+  if (openaiKey && !openaiKey.includes("your_") && openaiKey.length > 10) {
+    try {
+      let fileContext = "";
+      if (file && file.path) {
+        try {
+          const fileBuffer = await fs.readFile(file.path);
+          const mimeType = file.mimetype || "application/pdf";
+          if (mimeType.startsWith("image/")) {
+            const userContent = [
+              { type: "text", text: prompt },
+              {
+                type: "image_url",
+                image_url: { url: `data:${mimeType};base64,${fileBuffer.toString("base64")}` },
+              },
+            ];
+            const response = await fetch("https://api.openai.com/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${openaiKey}`,
+              },
+              body: JSON.stringify({
+                model: modelPreference?.includes("gpt-4o") ? modelPreference : "gpt-4o-mini",
+                messages: [
+                  {
+                    role: "system",
+                    content: "You are Zen AI, an enterprise-grade multi-agent AI assistant. Answer thoroughly, accurately, and professionally. Use Markdown formatting.",
+                  },
+                  { role: "user", content: userContent },
+                ],
+                temperature: 0.7,
+              }),
+              signal: AbortSignal.timeout(30000),
+            });
+            if (response.ok) {
+              const data = await response.json();
+              const candidate = data.choices?.[0]?.message?.content;
+              if (candidate) return candidate;
+            }
+          } else {
+            const raw = fileBuffer.toString("utf-8").replace(/[^\x20-\x7E\n\r\t]/g, " ").slice(0, 40000);
+            fileContext = `[Attached Document: ${file.originalname}]\n${raw}\n[End of Document]\n\n`;
+          }
+        } catch (fErr) {
+          logger.warn("Could not read file for OpenAI", { error: fErr.message });
+        }
+      }
+
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${openaiKey}`,
+        },
+        body: JSON.stringify({
+          model: modelPreference?.includes("gpt-4o") ? modelPreference : "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: "You are Zen AI, an enterprise-grade multi-agent AI assistant. Answer thoroughly, accurately, and professionally. Use Markdown formatting.",
+            },
+            {
+              role: "user",
+              content: `${fileContext}${prompt}`,
+            },
+          ],
+          temperature: 0.7,
+        }),
+        signal: AbortSignal.timeout(30000),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const candidate = data.choices?.[0]?.message?.content;
+        if (candidate) return candidate;
+      } else {
+        const errText = await response.text();
+        logger.warn("OpenAI API call returned non-200", { status: response.status, error: errText.slice(0, 200) });
+      }
+    } catch (oErr) {
+      logger.warn("OpenAI API invocation error", { error: oErr.message });
+    }
+  }
+
+  // 2. Google Gemini 2.5 Flash (Supports Multimodal PDF & Image natively)
   if (geminiKey && !geminiKey.includes("your_") && geminiKey.length > 10) {
     try {
       const parts = [];
@@ -217,8 +303,10 @@ export const handleAgentCancel = (req, res) => {
 
 export const handleGetProviders = (req, res) => {
   return sendSuccess(res, {
-    providers: ["gemini", "groq", "deepseek", "openrouter"],
+    providers: ["openai", "gemini", "groq", "deepseek", "openrouter"],
     supportedModels: [
+      { id: "gpt-4o-mini", name: "OpenAI GPT-4o Mini", provider: "OpenAI" },
+      { id: "gpt-4o", name: "OpenAI GPT-4o", provider: "OpenAI" },
       { id: "gemini", name: "Google Gemini 2.5 Flash", provider: "Google" },
       { id: "groq", name: "Llama 3.3 70B Versatile", provider: "Groq" },
       { id: "deepseek", name: "DeepSeek Chat", provider: "DeepSeek / OpenRouter" },
@@ -233,3 +321,4 @@ export default {
   handleAgentCancel,
   handleGetProviders,
 };
+

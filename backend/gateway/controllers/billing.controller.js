@@ -37,3 +37,4 @@ export default {
   handleVerifyPayment,
   handleGetTransactions,
 };
+

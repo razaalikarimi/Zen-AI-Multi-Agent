@@ -22,6 +22,23 @@ class AIProviderManager {
   }
 
   initializeProviders() {
+    // 0. OpenAI (GPT-4o / GPT-4o-mini)
+    if (process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.includes("your_")) {
+      import("@langchain/openai")
+        .then(({ ChatOpenAI }) => {
+          this.providers.set("openai", new ChatOpenAI({
+            model: "gpt-4o-mini",
+            apiKey: process.env.OPENAI_API_KEY,
+            temperature: 0.2,
+            maxRetries: 2,
+          }));
+          logger.info("Initialized OpenAI Provider (GPT-4o-mini)");
+        })
+        .catch((err) => {
+          logger.warn("Failed to init OpenAI provider", { error: err.message });
+        });
+    }
+
     // 1. Google Gemini
     if (process.env.GOOGLE_API_KEY && !process.env.GOOGLE_API_KEY.includes("your_")) {
       try {
@@ -80,7 +97,7 @@ class AIProviderManager {
     const agentName = options.agent || "general";
     
     // Determine priority fallback order
-    const priorityList = [requestedModel, "groq", "gemini", "openrouter"].filter(
+    const priorityList = [requestedModel, "openai", "groq", "gemini", "openrouter"].filter(
       (m, idx, self) => self.indexOf(m) === idx
     );
 
