@@ -35,7 +35,7 @@ export const login = async (req, res) => {
         uid: "mock-developer-uid-001",
         email: email || "developer@zen.ai",
         name: requestedName || "Zen Architect",
-        picture: "https://avatar.iran.liara.run/public/38",
+        picture: "https://ui-avatars.com/api/?name=Zen+Architect&background=0891b2&color=fff",
         firebase: {
           sign_in_provider: "google.com",
         },
@@ -61,7 +61,7 @@ export const login = async (req, res) => {
                 uid: payload.sub || payload.user_id || "google-user-" + Date.now(),
                 email: payload.email || email || "user@zen.ai",
                 name: payload.name || requestedName || payload.email?.split("@")[0] || "Zen User",
-                picture: payload.picture || "https://avatar.iran.liara.run/public/38",
+                picture: payload.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(requestedName || "Zen User")}&background=0891b2&color=fff`,
                 firebase: {
                   sign_in_provider: payload.firebase?.sign_in_provider || "google.com",
                 },

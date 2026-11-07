@@ -10,6 +10,26 @@ import { proxyWithUser } from "./utils/proxyWithHeaders.js";
 import { protect, requireRole } from "./middlewares/auth.middleware.js";
 import { getCurrentUser } from "./controllers/user.controller.js";
 import { handleLogin, handleLogout } from "./controllers/auth.controller.js";
+import {
+  handleCreateConversation,
+  handleGetConversations,
+  handleGetMessages,
+  handleUpdateConversation,
+  handleSaveMessage,
+} from "./controllers/chat.controller.js";
+import {
+  handleAgentChat,
+  handleAgentStream,
+  handleAgentCancel,
+  handleGetProviders,
+} from "./controllers/agent.controller.js";
+import {
+  handleCreateOrder,
+  handleVerifyPayment,
+  handleGetTransactions,
+} from "./controllers/billing.controller.js";
+import multer from "multer";
+import os from "os";
 import correlationIdMiddleware from "../shared/middleware/correlationId.js";
 import errorHandler from "../shared/middleware/errorHandler.js";
 import { createLogger } from "../shared/logger/logger.js";
@@ -20,6 +40,11 @@ dotenv.config();
 const logger = createLogger("gateway");
 const app = express();
 const port = process.env.PORT || 8000;
+
+const upload = multer({
+  dest: os.tmpdir(),
+  limits: { fileSize: 25 * 1024 * 1024 },
+});
 
 const envOrigins = (process.env.FRONTEND_URL || "")
   .split(",")
@@ -105,33 +130,64 @@ app.get("/", (req, res) => {
   });
 });
 
-// Proxied Routes
-const AUTH_SERVICE = process.env.AUTH_SERVICE || "http://localhost:8001";
-const CHAT_SERVICE = process.env.CHAT_SERVICE || "http://localhost:8002";
-const AGENT_SERVICE = process.env.AGENT_SERVICE || "http://localhost:8003";
-const BILLING_SERVICE = process.env.BILLING_SERVICE || "http://localhost:8004";
+// Proxied / External Service Definitions
+const AUTH_SERVICE = process.env.AUTH_SERVICE;
+const CHAT_SERVICE = process.env.CHAT_SERVICE;
+const AGENT_SERVICE = process.env.AGENT_SERVICE;
+const BILLING_SERVICE = process.env.BILLING_SERVICE;
 
 // Auth routes (Direct resilient login with remote proxy fallback)
 app.post("/api/auth/login", handleLogin);
 app.all("/api/auth/logout", handleLogout);
-app.use("/api/auth", proxy(AUTH_SERVICE, {
-  parseReqBody: true,
-  proxyReqOptDecorator: (opts, req) => {
-    opts.headers["x-correlation-id"] = req.correlationId;
-    return opts;
-  },
-}));
+if (AUTH_SERVICE && !AUTH_SERVICE.includes("localhost") && AUTH_SERVICE !== "self") {
+  app.use("/api/auth", proxy(AUTH_SERVICE, {
+    parseReqBody: true,
+    proxyReqOptDecorator: (opts, req) => {
+      opts.headers["x-correlation-id"] = req.correlationId;
+      return opts;
+    },
+  }));
+}
 
 // User profile
 app.get("/api/me", protect, getCurrentUser);
 
-// Protected service proxies
-app.use("/api/chat", protect, proxyWithUser(CHAT_SERVICE));
-app.use("/api/agent", protect, proxyWithUser(AGENT_SERVICE));
-app.use("/api/billing", protect, proxyWithUser(BILLING_SERVICE));
+// Chat endpoints (Direct resilient handlers with remote proxy fallback)
+app.post("/api/chat/create-conversation", protect, handleCreateConversation);
+app.get("/api/chat/get-conversations", protect, handleGetConversations);
+app.get("/api/chat/get-messages/:id", protect, handleGetMessages);
+app.post("/api/chat/update-conversation", protect, handleUpdateConversation);
+app.post("/api/chat/save-message", protect, handleSaveMessage);
+app.get("/api/chat/conversations", protect, handleGetConversations);
+app.post("/api/chat/conversations", protect, handleCreateConversation);
+
+if (CHAT_SERVICE && !CHAT_SERVICE.includes("localhost") && CHAT_SERVICE !== "self") {
+  app.use("/api/chat", protect, proxyWithUser(CHAT_SERVICE));
+}
+
+// Agent endpoints (Direct AI execution with remote proxy fallback)
+app.post("/api/agent/chat", protect, upload.single("file"), handleAgentChat);
+app.post("/api/agent/stream", protect, upload.single("file"), handleAgentStream);
+app.post("/api/agent/cancel", protect, handleAgentCancel);
+app.get("/api/agent/providers", handleGetProviders);
+
+if (AGENT_SERVICE && !AGENT_SERVICE.includes("localhost") && AGENT_SERVICE !== "self") {
+  app.use("/api/agent", protect, proxyWithUser(AGENT_SERVICE));
+}
+
+// Billing endpoints (Direct resilient handlers with remote proxy fallback)
+app.post("/api/billing/create-order", protect, handleCreateOrder);
+app.post("/api/billing/verify-payment", protect, handleVerifyPayment);
+app.get("/api/billing/transactions", protect, handleGetTransactions);
+
+if (BILLING_SERVICE && !BILLING_SERVICE.includes("localhost") && BILLING_SERVICE !== "self") {
+  app.use("/api/billing", protect, proxyWithUser(BILLING_SERVICE));
+}
 
 // Admin proxy routes
-app.use("/api/admin", protect, requireRole("admin"), proxyWithUser(AUTH_SERVICE));
+if (AUTH_SERVICE && !AUTH_SERVICE.includes("localhost") && AUTH_SERVICE !== "self") {
+  app.use("/api/admin", protect, requireRole("admin"), proxyWithUser(AUTH_SERVICE));
+}
 
 // Global Error Handler
 app.use(errorHandler);
