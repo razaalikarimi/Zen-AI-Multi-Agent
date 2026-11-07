@@ -48,6 +48,9 @@ function Home() {
   const login = async (token) => {
     try {
       const { data } = await api.post(`/api/auth/login`, { token });
+      if (data?.sessionId) {
+        localStorage.setItem("zen_session", data.sessionId);
+      }
       dispatch(setUserData(data.user));
     } catch (error) {
       console.log(error);

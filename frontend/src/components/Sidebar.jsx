@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Plus, MessageSquare, LogOut, User, PenSquare, Menu, X, CoinsIcon, Cpu,
   Sparkles, ChevronRight, LayoutDashboard, Code2, Database, BarChart3,
@@ -90,6 +90,7 @@ function CollapsedRail({ onExpand, onNewChat, conversations, selectedConversatio
 
 export default function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [hovered, setHovered] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -103,11 +104,12 @@ export default function Sidebar() {
   const logout = async () => {
     try {
       await api.get("/api/auth/logout");
+    } catch (error) { 
+      console.log(error); 
+    } finally {
       localStorage.removeItem("zen_session");
       dispatch(setUserData(null));
-    } catch (error) { 
-      localStorage.removeItem("zen_session");
-      console.log(error); 
+      navigate("/login");
     }
   };
 
