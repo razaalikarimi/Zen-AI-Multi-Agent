@@ -9,6 +9,7 @@ import cookieParser from "cookie-parser";
 import { proxyWithUser } from "./utils/proxyWithHeaders.js";
 import { protect, requireRole } from "./middlewares/auth.middleware.js";
 import { getCurrentUser } from "./controllers/user.controller.js";
+import { handleLogin, handleLogout } from "./controllers/auth.controller.js";
 import correlationIdMiddleware from "../shared/middleware/correlationId.js";
 import errorHandler from "../shared/middleware/errorHandler.js";
 import { createLogger } from "../shared/logger/logger.js";
@@ -110,7 +111,9 @@ const CHAT_SERVICE = process.env.CHAT_SERVICE || "http://localhost:8002";
 const AGENT_SERVICE = process.env.AGENT_SERVICE || "http://localhost:8003";
 const BILLING_SERVICE = process.env.BILLING_SERVICE || "http://localhost:8004";
 
-// Auth routes (public login/logout)
+// Auth routes (Direct resilient login with remote proxy fallback)
+app.post("/api/auth/login", handleLogin);
+app.all("/api/auth/logout", handleLogout);
 app.use("/api/auth", proxy(AUTH_SERVICE, {
   parseReqBody: true,
   proxyReqOptDecorator: (opts, req) => {

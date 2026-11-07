@@ -36,3 +36,4 @@ test("Session Token: Reject Expired Token", () => {
   const verified = verifySessionToken(expiredToken);
   assert.strictEqual(verified, null);
 });
+

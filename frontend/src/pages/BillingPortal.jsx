@@ -59,6 +59,7 @@ export default function BillingPortal() {
 
   useEffect(() => {
     const fetchTransactions = async () => {
+      if (!userData) return;
       try {
         const { data } = await api.get("/api/billing/transactions");
         if (data?.data?.transactions) {

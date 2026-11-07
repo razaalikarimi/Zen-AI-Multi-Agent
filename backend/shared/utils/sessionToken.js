@@ -55,3 +55,4 @@ export default {
   signSessionToken,
   verifySessionToken,
 };
+

@@ -113,13 +113,14 @@ export default function Sidebar() {
 
   useEffect(() => {
     const fetchConversations = async () => {
+      if (!userData?._id && !userData?.userId) return;
       try {
         const data = await getConversations();
         dispatch(setConversations(data));
       } catch (error) { console.log(error); }
     };
     fetchConversations();
-  }, [userData?._id]);
+  }, [userData?._id, userData?.userId]);
 
   const handleCreateConversation = () => {
     dispatch(setSelectedConversation(null));

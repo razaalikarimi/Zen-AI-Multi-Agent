@@ -28,6 +28,7 @@ export default function AdminConsole() {
 
   useEffect(() => {
     const fetchAdminData = async () => {
+      if (!userData || userData.role !== "admin") return;
       try {
         const { data } = await api.get("/api/admin/overview");
         if (data?.data?.metrics) setMetrics(data.data.metrics);

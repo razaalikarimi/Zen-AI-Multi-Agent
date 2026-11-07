@@ -8,6 +8,9 @@ function useCurrentUser() {
 
   useEffect(() => {
     const fetchUser = async () => {
+      const token = localStorage.getItem("zen_session");
+      if (!token) return;
+
       try {
         const { data } = await api.get("/api/me");
         const user = data?.user || data?.data?.user;
@@ -15,9 +18,9 @@ function useCurrentUser() {
           dispatch(setUserData(user));
         }
       } catch (error) {
-        // Unauthenticated initial state is expected before login
-        if (error.response?.status !== 401) {
-          console.warn("User session check notice:", error.message);
+        if (error.response?.status === 401) {
+          localStorage.removeItem("zen_session");
+          dispatch(setUserData(null));
         }
       }
     };
