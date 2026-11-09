@@ -59,6 +59,8 @@ temp_redis.json
 .cache/
 .temp/
 uploads/
+!**/uploads/.gitkeep
+!**/temp/.gitkeep
 useless/
 
 
