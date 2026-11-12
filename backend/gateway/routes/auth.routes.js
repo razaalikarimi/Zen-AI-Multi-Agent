@@ -20,3 +20,4 @@ if (AUTH_SERVICE && !AUTH_SERVICE.includes("localhost") && AUTH_SERVICE !== "sel
 }
 
 export default router;
+

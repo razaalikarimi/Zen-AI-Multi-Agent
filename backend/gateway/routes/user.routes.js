@@ -7,3 +7,4 @@ const router = express.Router();
 router.get("/me", protect, getCurrentUser);
 
 export default router;
+

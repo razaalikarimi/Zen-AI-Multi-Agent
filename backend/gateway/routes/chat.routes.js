@@ -29,3 +29,4 @@ if (CHAT_SERVICE && !CHAT_SERVICE.includes("localhost") && CHAT_SERVICE !== "sel
 }
 
 export default router;
+

@@ -61,7 +61,6 @@ temp_redis.json
 uploads/
 !**/uploads/.gitkeep
 !**/temp/.gitkeep
-useless/
 
 
 # ========================
