@@ -5,6 +5,15 @@ import { storeMessageHelper } from "./chat.controller.js";
 
 const logger = createLogger("gateway-agent");
 
+const isValidKey = (k) =>
+  typeof k === "string" &&
+  k.length > 15 &&
+  !k.includes(" ") &&
+  !k.includes("your_") &&
+  !k.includes("paste") &&
+  !k.includes("real") &&
+  /^[A-Za-z0-9_.-]+$/.test(k);
+
 /**
  * Intelligent AI synthesis using Gemini REST API, Groq, or resilient contextual generator.
  */
@@ -14,7 +23,7 @@ async function callLLM({ prompt, file, modelPreference }) {
   const groqKey = process.env.GROQ_API_KEY;
 
   // 1. OpenAI (GPT-4o / GPT-4o-mini)
-  if (openaiKey && !openaiKey.includes("your_") && openaiKey.length > 10) {
+  if (isValidKey(openaiKey)) {
     try {
       let fileContext = "";
       if (file && file.path) {
@@ -99,7 +108,7 @@ async function callLLM({ prompt, file, modelPreference }) {
   }
 
   // 2. Google Gemini 2.5 Flash (Supports Multimodal PDF & Image natively)
-  if (geminiKey && !geminiKey.includes("your_") && geminiKey.length > 10) {
+  if (isValidKey(geminiKey)) {
     try {
       const parts = [];
 
@@ -157,8 +166,8 @@ async function callLLM({ prompt, file, modelPreference }) {
     }
   }
 
-  // 2. Groq Llama 3.3 70B
-  if (groqKey && !groqKey.includes("your_") && groqKey.length > 10) {
+  // 3. Groq Llama 3.3 70B
+  if (isValidKey(groqKey)) {
     try {
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",

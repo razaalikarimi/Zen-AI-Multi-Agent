@@ -7,6 +7,15 @@ import { createLogger } from "../../../shared/logger/logger.js";
 dotenv.config();
 const logger = createLogger("ai-provider-manager");
 
+const isValidKey = (k) =>
+  typeof k === "string" &&
+  k.length > 15 &&
+  !k.includes(" ") &&
+  !k.includes("your_") &&
+  !k.includes("paste") &&
+  !k.includes("real") &&
+  /^[A-Za-z0-9_.-]+$/.test(k);
+
 // Model pricing estimates per 1,000 tokens (USD)
 const MODEL_PRICING = {
   "gemini-2.5-flash": { prompt: 0.00015, completion: 0.0006 },
@@ -23,7 +32,7 @@ class AIProviderManager {
 
   initializeProviders() {
     // 0. OpenAI (GPT-4o / GPT-4o-mini)
-    if (process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.includes("your_")) {
+    if (isValidKey(process.env.OPENAI_API_KEY)) {
       import("@langchain/openai")
         .then(({ ChatOpenAI }) => {
           this.providers.set("openai", new ChatOpenAI({
@@ -40,7 +49,7 @@ class AIProviderManager {
     }
 
     // 1. Google Gemini
-    if (process.env.GOOGLE_API_KEY && !process.env.GOOGLE_API_KEY.includes("your_")) {
+    if (isValidKey(process.env.GOOGLE_API_KEY)) {
       try {
         this.providers.set("gemini", new ChatGoogleGenerativeAI({
           model: "gemini-2.5-flash",
@@ -55,7 +64,7 @@ class AIProviderManager {
     }
 
     // 2. Groq (Llama 3.3 70B)
-    if (process.env.GROQ_API_KEY && !process.env.GROQ_API_KEY.includes("your_")) {
+    if (isValidKey(process.env.GROQ_API_KEY)) {
       try {
         this.providers.set("groq", new ChatGroq({
           model: "llama-3.3-70b-versatile",
