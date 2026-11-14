@@ -30,7 +30,6 @@ jobs:
           path: |
             ~/.npm
             frontend/node_modules
-            backend/node_modules
             backend/gateway/node_modules
             backend/services/auth/node_modules
             backend/services/chat/node_modules
@@ -42,7 +41,6 @@ jobs:
 
       - name: Install Dependencies Across Services
         run: |
-          npm --prefix backend install
           npm --prefix backend/gateway install
           npm --prefix backend/services/auth install
           npm --prefix backend/services/chat install
@@ -53,6 +51,14 @@ jobs:
       - name: Build Frontend Application
         run: |
           npm --prefix frontend run build
+
+      - name: Run Automated Test Suite
+        env:
+          NODE_ENV: test
+          ALLOW_DEV_MOCK_LOGIN: true
+          DISABLE_SERVICE_AUTH: true
+        run: |
+          npm test
 
       - name: Run Backend Integration & Smoke Tests
         env:
