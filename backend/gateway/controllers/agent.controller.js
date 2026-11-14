@@ -14,13 +14,28 @@ const isValidKey = (k) =>
   !k.includes("real") &&
   /^[A-Za-z0-9_.-]+$/.test(k);
 
+const AGENT_PERSONAS = {
+  coding: "You are Zen AI Coding Agent, an elite Full-Stack Software Engineer. Always provide clean, production-grade, multi-file code. When creating web applications, structure your output with separate files using 'FILE: index.html', 'FILE: style.css', and 'FILE: script.js'. Make sure the code is completely self-contained, responsive, and visually polished.",
+  planning: "You are Zen AI Planning Agent, a Principal System Architect. Break down requirements into phased milestone roadmaps, system architecture blueprints, technical risk identification, and engineering specifications with clear Gantt/milestone tables.",
+  research: "You are Zen AI Research Agent, a Lead Intelligence Analyst. Provide comprehensive, structured deep-dives with executive briefings, comparative analysis, factual synthesis, and source citations.",
+  review: "You are Zen AI Review & QA Agent, a Principal Security and Code Auditor. Audit user inputs and code for OWASP Top 10 vulnerabilities, edge-case failure modes, performance bottlenecks, and style guide compliance.",
+  pdf: "You are Zen AI Document Agent, an Executive Publishing Engine. Structure outputs formatted as formal executive reports, whitepapers, or policy briefs with clear headers, tables, bullet points, and an executive summary.",
+  ppt: "You are Zen AI Slides Agent, an Executive Presentation Specialist. Structure content slide by slide with 'Slide 1: [Title]', 'Slide 2: [Agenda]', etc., including key bullet points, presenter notes, and visual layout recommendations.",
+  data: "You are Zen AI Data Analysis Agent, a Quantitative Financial & Metric Analyst. Analyze numerical inputs, generate structured markdown data tables, compute KPIs, and highlight statistical anomalies and growth trends.",
+  search: "You are Zen AI Web Search Agent, a Real-Time Intelligence Crawler. Provide live web intelligence, news updates, and cited facts with clear source links.",
+  chat: "You are Zen AI Chat Agent, a friendly and highly knowledgeable assistant. Maintain rich conversational memory, give thorough and clear explanations, and assist with any reasoning task.",
+  auto: "You are Zen AI Supervisor Agent, an intelligent multi-agent meta-orchestrator. Coordinate across engineering, architecture, intelligence, and analytics domains to provide the most optimal, unified solution.",
+};
+
 /**
  * Intelligent AI synthesis using Gemini REST API, Groq, or resilient contextual generator.
  */
-async function callLLM({ prompt, file, modelPreference, conversationId }) {
+async function callLLM({ prompt, file, modelPreference, conversationId, agent }) {
   const openaiKey = process.env.OPENAI_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   const groqKey = process.env.GROQ_API_KEY;
+
+  const systemContent = AGENT_PERSONAS[agent] || AGENT_PERSONAS.auto;
 
   // Retrieve prior conversation context for intelligent multi-turn continuity
   const priorTurns = conversationId ? getConversationHistory(conversationId, 10) : [];
@@ -55,7 +70,7 @@ async function callLLM({ prompt, file, modelPreference, conversationId }) {
                 messages: [
                   {
                     role: "system",
-                    content: "You are Zen AI, an enterprise-grade multi-agent AI assistant. Answer thoroughly, accurately, and professionally. Maintain conversation continuity and context with prior messages and document analysis. Use Markdown formatting.",
+                    content: systemContent,
                   },
                   ...chatHistory,
                   { role: "user", content: userContent },
@@ -89,7 +104,7 @@ async function callLLM({ prompt, file, modelPreference, conversationId }) {
           messages: [
             {
               role: "system",
-              content: "You are Zen AI, an enterprise-grade multi-agent AI assistant. Answer thoroughly, accurately, and professionally. Maintain conversation continuity and context with prior messages and document analysis. Use Markdown formatting.",
+              content: systemContent,
             },
             ...chatHistory,
             {
@@ -258,6 +273,7 @@ export const handleAgentChat = async (req, res) => {
       file,
       modelPreference: model,
       conversationId,
+      agent,
     });
 
     // Extract multi-file projects or code blocks for the Monaco Artifacts studio
