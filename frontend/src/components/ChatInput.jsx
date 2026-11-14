@@ -47,9 +47,7 @@ export default function ChatInput({ setBanner }) {
   const { isLoading } = useSelector(state => state.message);
 
   useEffect(() => {
-    if (location.state?.initialPrompt) {
-      setValue(location.state.initialPrompt);
-    }
+    setValue(""); // Always start with a clean empty input box
     if (location.state?.selectedAgent) {
       setSelectedAgent(location.state.selectedAgent);
     } else {
@@ -61,6 +59,7 @@ export default function ChatInput({ setBanner }) {
         }
       } catch (e) { /* ignore */ }
     }
+    textareaRef.current?.focus();
   }, [location.state]);
 
   useEffect(() => {

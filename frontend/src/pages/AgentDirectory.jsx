@@ -114,7 +114,7 @@ export default function AgentDirectory() {
     return matchesSearch && matchesCategory;
   });
 
-  const launchWithPrompt = (prompt, agentId) => {
+  const launchAgent = (agentId) => {
     dispatch(setSelectedConversation(null));
     dispatch(setMessages([]));
     dispatch(setArtifacts([]));
@@ -131,7 +131,7 @@ export default function AgentDirectory() {
     };
 
     const targetAgent = agentMap[agentId] || "auto";
-    navigate("/chat", { state: { initialPrompt: prompt, selectedAgent: targetAgent } });
+    navigate("/chat", { state: { selectedAgent: targetAgent } });
   };
 
   return (
@@ -222,7 +222,7 @@ export default function AgentDirectory() {
                   </div>
 
                   <button
-                    onClick={() => launchWithPrompt(agent.samplePrompt, agent.id)}
+                    onClick={() => launchAgent(agent.id)}
                     className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[12.5px] font-semibold text-white transition cursor-pointer border-none shadow-sm hover:opacity-95"
                     style={{ background: agent.color }}
                   >
