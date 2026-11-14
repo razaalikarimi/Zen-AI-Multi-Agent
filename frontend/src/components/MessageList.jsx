@@ -58,14 +58,6 @@ function GeneratingIndicator() {
   );
 }
 
-const SUGGESTIONS = [
-  { icon: Code2, label: "Build a REST API", color: "#8b5cf6" },
-  { icon: Globe, label: "Search latest AI news", color: "#3b82f6" },
-  { icon: FileText, label: "Write a business plan PDF", color: "#ef4444" },
-  { icon: ImageIcon, label: "Generate a logo design", color: "#10b981" },
-  { icon: Zap, label: "Explain quantum computing", color: "#f59e0b" },
-];
-
 function EmptyState() {
   return (
     <div className="h-full flex flex-col items-center justify-center gap-6 text-center px-6">
@@ -101,26 +93,9 @@ function EmptyState() {
         transition={{ delay: 0.15, duration: 0.5 }} className="space-y-2">
         <h1 className="text-[22px] font-bold tracking-tight gradient-text">Zen AI</h1>
         <p className="text-[15px] font-medium" style={{ color: "#64748b" }}>Your multi-agent AI assistant</p>
-        <p className="text-[13px] leading-relaxed max-w-[300px]" style={{ color: "#94a3b8" }}>
-          Code · Search · Create images · Generate PDFs & slides
+        <p className="text-[13px] leading-relaxed max-w-[360px]" style={{ color: "#94a3b8" }}>
+          Select an agent below or start typing to begin a new conversation.
         </p>
-      </motion.div>
-
-      <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.3, duration: 0.5 }}
-        className="flex flex-wrap justify-center gap-2 max-w-[420px]">
-        {SUGGESTIONS.map(({ icon: Icon, label, color }, i) => (
-          <motion.button key={label}
-            initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.35 + i * 0.06, duration: 0.3 }}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12px] font-medium cursor-pointer border-none transition-all duration-200"
-            style={{ background: "#ffffff", color: "#64748b", border: `1px solid rgba(0,0,0,0.08)`, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}
-            onMouseEnter={e => { e.currentTarget.style.background = `${color}08`; e.currentTarget.style.color = color; e.currentTarget.style.borderColor = `${color}28`; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.color = "#64748b"; e.currentTarget.style.borderColor = "rgba(0,0,0,0.08)"; }}>
-            <Icon size={12} />
-            {label}
-          </motion.button>
-        ))}
       </motion.div>
     </div>
   );

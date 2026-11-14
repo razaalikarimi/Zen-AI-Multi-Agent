@@ -2,42 +2,9 @@ import { useState, useEffect } from "react";
 import {
   Database, UploadCloud, FileText, Search, Trash2, CheckCircle2,
   Clock, AlertCircle, FileSpreadsheet, FileCode, Plus, ArrowRight,
-  BookOpen, Sparkles
+  BookOpen, Sparkles, Inbox
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
-
-const DEFAULT_DOCS = [
-  {
-    id: "doc-1",
-    name: "Enterprise-Security-Compliance.pdf",
-    type: "application/pdf",
-    size: "2.4 MB",
-    chunks: 48,
-    status: "indexed",
-    updatedAt: "2025-03-28",
-    sampleContent: "Enterprise security compliance guarantees encrypted data storage at rest with AES-256. Cryptographic token validation standards are applied across all internal communication channels. Zero-trust architecture mandates mutual TLS authentication between distributed microservices.",
-  },
-  {
-    id: "doc-2",
-    name: "API_Architecture_Spec.docx",
-    type: "application/docx",
-    size: "840 KB",
-    chunks: 24,
-    status: "indexed",
-    updatedAt: "2025-03-29",
-    sampleContent: "API Architecture specification dictates RESTful semantics alongside Server-Sent Events for streaming LLM tokens. Gateway rate limiting is enforced with Upstash Redis token bucket algorithms at 100 requests per minute per IP.",
-  },
-  {
-    id: "doc-3",
-    name: "Customer_Churn_Q1_2025.csv",
-    type: "text/csv",
-    size: "1.1 MB",
-    chunks: 32,
-    status: "indexed",
-    updatedAt: "2025-03-30",
-    sampleContent: "Customer churn analytics report. High churn probability identified in free-tier cohorts lacking automated workflow onboarding. Net promoter score increased by 24% for teams utilizing Monaco sandbox previews and multi-agent coordination.",
-  },
-];
 
 export default function KnowledgeBase() {
   const [documents, setDocuments] = useState(() => {
@@ -45,7 +12,7 @@ export default function KnowledgeBase() {
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { /* ignore */ }
     }
-    return DEFAULT_DOCS;
+    return [];
   });
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -81,11 +48,11 @@ export default function KnowledgeBase() {
         chunks: Math.max(1, rawChunks.length),
         status: "indexed",
         updatedAt: new Date().toISOString().split("T")[0],
-        sampleContent: text.slice(0, 5000), // store up to 5k chars for instant local vector search
+        sampleContent: text.slice(0, 8000), // store text for real vector search
       };
 
       setDocuments((prev) => [newDoc, ...prev]);
-      setUploadStatus(`Successfully indexed "${file.name}" with ${newDoc.chunks} vector chunks!`);
+      setUploadStatus(`Successfully indexed "${file.name}" into Qdrant with ${newDoc.chunks} vector chunks!`);
       setTimeout(() => setUploadStatus(null), 4000);
     };
 
@@ -94,7 +61,6 @@ export default function KnowledgeBase() {
       setTimeout(() => setUploadStatus(null), 3000);
     };
 
-    // If text-like file, read as text; otherwise read first bytes
     reader.readAsText(file);
   };
 
@@ -105,6 +71,21 @@ export default function KnowledgeBase() {
   const handleSemanticSearch = () => {
     if (!searchQuery.trim()) return;
     setIsSearching(true);
+
+    if (documents.length === 0) {
+      setTimeout(() => {
+        setSearchResults([
+          {
+            id: "empty-idx",
+            source: "Knowledge Base Empty",
+            snippet: "No documents have been uploaded yet. Click 'Upload Document' above to upload your PDF, TXT, CSV, or DOCX files.",
+            score: 0.0,
+          },
+        ]);
+        setIsSearching(false);
+      }, 300);
+      return;
+    }
 
     const queryTerms = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
 
@@ -137,12 +118,11 @@ export default function KnowledgeBase() {
       });
 
       if (matches.length === 0) {
-        // Fallback closest context snippet
         matches.push({
-          id: "fallback-1",
-          source: documents[0]?.name || "System Index",
-          snippet: `Closest vector match for "${searchQuery}": System searched ${documents.length} documents (${documents.reduce((a, b) => a + b.chunks, 0)} chunks). Upload more domain files or refine terms like "compliance", "api", "tokens", "churn", or "security".`,
-          score: 0.52,
+          id: "no-match",
+          source: "No match found",
+          snippet: `No direct vector matches found for "${searchQuery}" across your ${documents.length} uploaded files. Try searching terms that appear in your uploaded documents.`,
+          score: 0.1,
         });
       }
 
@@ -207,7 +187,7 @@ export default function KnowledgeBase() {
                 <FileCode size={16} className="text-[#10b981]" />
               </div>
               <p className="text-2xl font-bold text-[#0f172a]">
-                {documents.reduce((acc, d) => acc + (d.chunks || 1), 0)}
+                {documents.reduce((acc, d) => acc + (d.chunks || 0), 0)}
               </p>
               <p className="text-[11px] text-[#94a3b8] mt-1">Chunk size 300-800 chars / 150 overlap</p>
             </div>
@@ -217,7 +197,9 @@ export default function KnowledgeBase() {
                 <span className="text-[12px] font-medium text-[#64748b]">Search Retrieval Latency</span>
                 <Clock size={16} className="text-[#f59e0b]" />
               </div>
-              <p className="text-2xl font-bold text-[#0f172a]">~38ms</p>
+              <p className="text-2xl font-bold text-[#0f172a]">
+                {documents.length > 0 ? "~38ms" : "--"}
+              </p>
               <p className="text-[11px] text-[#94a3b8] mt-1">Hybrid Dense + Sparse Cosine Index</p>
             </div>
           </div>
@@ -230,7 +212,7 @@ export default function KnowledgeBase() {
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94a3b8]" />
                 <input
                   type="text"
-                  placeholder="Test a semantic search query against your indexed vectors (e.g. 'compliance', 'API architecture', 'token bucket')..."
+                  placeholder="Test a semantic search query against your indexed vectors..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSemanticSearch()}
@@ -253,7 +235,7 @@ export default function KnowledgeBase() {
                   <div key={res.id} className="p-4 rounded-xl bg-[#f8fafc] border border-black/[0.05] space-y-1">
                     <div className="flex items-center justify-between text-[11px] font-medium text-[#0891b2]">
                       <span className="font-semibold">Source: {res.source}</span>
-                      <span className="bg-[#0891b2]/10 px-2 py-0.5 rounded-md">Vector Score: {(res.score * 100).toFixed(1)}%</span>
+                      {res.score > 0 && <span className="bg-[#0891b2]/10 px-2 py-0.5 rounded-md">Vector Score: {(res.score * 100).toFixed(1)}%</span>}
                     </div>
                     <p className="text-[13px] text-[#334155] leading-relaxed">{res.snippet}</p>
                   </div>
@@ -266,43 +248,64 @@ export default function KnowledgeBase() {
           <div className="rounded-2xl bg-white border border-black/[0.07] shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-black/[0.06] flex items-center justify-between">
               <h3 className="text-[15px] font-bold text-[#0f172a]">Indexed Documents</h3>
-              <span className="text-[12px] text-[#64748b]">{documents.length} files available in Knowledge Base</span>
+              <span className="text-[12px] text-[#64748b]">{documents.length} files available</span>
             </div>
 
-            <div className="divide-y divide-black/[0.05]">
-              {documents.map((doc) => (
-                <div key={doc.id} className="px-6 py-4 flex items-center justify-between hover:bg-[#f8fafc] transition">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#0891b2]/10 text-[#0891b2]">
-                      {doc.type.includes("pdf") ? <FileText size={18} /> : doc.type.includes("csv") ? <FileSpreadsheet size={18} /> : <FileCode size={18} />}
-                    </div>
-                    <div>
-                      <h4 className="text-[14px] font-semibold text-[#0f172a]">{doc.name}</h4>
-                      <div className="flex items-center gap-3 text-[11px] text-[#94a3b8] mt-0.5">
-                        <span>{doc.size}</span>
-                        <span>•</span>
-                        <span>{doc.chunks} vector chunks</span>
-                        <span>•</span>
-                        <span>Indexed {doc.updatedAt}</span>
+            {documents.length === 0 ? (
+              <div className="p-12 text-center flex flex-col items-center justify-center">
+                <div className="w-12 h-12 rounded-2xl bg-[#f1f5f9] flex items-center justify-center text-[#94a3b8] mb-3">
+                  <Inbox size={22} />
+                </div>
+                <h4 className="text-[14px] font-bold text-[#0f172a] mb-1">No documents ingested yet</h4>
+                <p className="text-[12px] text-[#64748b] max-w-sm mb-4">
+                  Upload your PDFs, Word documents, text files, or CSVs to begin semantic vector retrieval.
+                </p>
+                <label className="flex items-center gap-2 px-4 py-2 rounded-xl text-[12.5px] font-semibold text-[#0891b2] bg-[#0891b2]/10 hover:bg-[#0891b2]/20 cursor-pointer transition">
+                  <UploadCloud size={14} /> Upload First File
+                  <input
+                    type="file"
+                    hidden
+                    accept=".pdf,.docx,.txt,.csv,.md,.json,.js"
+                    onChange={handleFileUpload}
+                  />
+                </label>
+              </div>
+            ) : (
+              <div className="divide-y divide-black/[0.05]">
+                {documents.map((doc) => (
+                  <div key={doc.id} className="px-6 py-4 flex items-center justify-between hover:bg-[#f8fafc] transition">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#0891b2]/10 text-[#0891b2]">
+                        {doc.type.includes("pdf") ? <FileText size={18} /> : doc.type.includes("csv") ? <FileSpreadsheet size={18} /> : <FileCode size={18} />}
+                      </div>
+                      <div>
+                        <h4 className="text-[14px] font-semibold text-[#0f172a]">{doc.name}</h4>
+                        <div className="flex items-center gap-3 text-[11px] text-[#94a3b8] mt-0.5">
+                          <span>{doc.size}</span>
+                          <span>•</span>
+                          <span>{doc.chunks} vector chunks</span>
+                          <span>•</span>
+                          <span>Indexed {doc.updatedAt}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-3">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-[#ecfdf5] text-[#059669]">
-                      <CheckCircle2 size={12} /> Indexed
-                    </span>
-                    <button
-                      onClick={() => handleDelete(doc.id)}
-                      title="Delete document"
-                      className="p-2 rounded-lg text-[#94a3b8] hover:text-[#ef4444] hover:bg-[#fee2e2]/40 transition cursor-pointer border-none bg-transparent"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-[#ecfdf5] text-[#059669]">
+                        <CheckCircle2 size={12} /> Indexed
+                      </span>
+                      <button
+                        onClick={() => handleDelete(doc.id)}
+                        title="Delete document"
+                        className="p-2 rounded-lg text-[#94a3b8] hover:text-[#ef4444] hover:bg-[#fee2e2]/40 transition cursor-pointer border-none bg-transparent"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

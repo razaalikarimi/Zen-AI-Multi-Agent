@@ -68,18 +68,7 @@ export default function BillingPortal() {
           setTransactions(data.data.transactions);
         }
       } catch (err) {
-        // Fallback demo transactions
-        setTransactions([
-          {
-            orderId: "order_mock_982421",
-            paymentId: "pay_mock_112042",
-            plan: "pro",
-            amount: 499,
-            credits: 1000,
-            status: "paid",
-            createdAt: "2025-03-30T10:14:00.000Z",
-          },
-        ]);
+        setTransactions([]);
       }
     };
     fetchTransactions();
@@ -291,38 +280,44 @@ export default function BillingPortal() {
               <Receipt size={18} className="text-[#94a3b8]" />
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-[13px]">
-                <thead className="bg-[#f8fafc] text-[#64748b] text-[11px] uppercase tracking-wider font-semibold border-b border-black/[0.05]">
-                  <tr>
-                    <th className="px-6 py-3">Order ID</th>
-                    <th className="px-6 py-3">Plan</th>
-                    <th className="px-6 py-3">Amount</th>
-                    <th className="px-6 py-3">Credits</th>
-                    <th className="px-6 py-3">Status</th>
-                    <th className="px-6 py-3">Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/[0.05] text-[#334155]">
-                  {transactions.map((tx, idx) => (
-                    <tr key={idx} className="hover:bg-[#f8fafc] transition">
-                      <td className="px-6 py-3.5 font-mono text-[12px] text-[#0f172a]">{tx.orderId || "tx_auto_001"}</td>
-                      <td className="px-6 py-3.5 capitalize font-medium">{tx.plan}</td>
-                      <td className="px-6 py-3.5 font-semibold">₹{tx.amount}</td>
-                      <td className="px-6 py-3.5 text-[#0891b2] font-medium">+{tx.credits}</td>
-                      <td className="px-6 py-3.5">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#ecfdf5] text-[#059669]">
-                          <CheckCircle2 size={12} /> {tx.status || "Paid"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-3.5 text-[#94a3b8] text-[12px]">
-                        {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : "Just now"}
-                      </td>
+            {transactions.length === 0 ? (
+              <div className="p-8 text-center text-[#94a3b8] text-[13px]">
+                No payment transactions yet. When you upgrade your plan, receipts will appear here.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-[13px]">
+                  <thead className="bg-[#f8fafc] text-[#64748b] text-[11px] uppercase tracking-wider font-semibold border-b border-black/[0.05]">
+                    <tr>
+                      <th className="px-6 py-3">Order ID</th>
+                      <th className="px-6 py-3">Plan</th>
+                      <th className="px-6 py-3">Amount</th>
+                      <th className="px-6 py-3">Credits</th>
+                      <th className="px-6 py-3">Status</th>
+                      <th className="px-6 py-3">Date</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-black/[0.05] text-[#334155]">
+                    {transactions.map((tx, idx) => (
+                      <tr key={idx} className="hover:bg-[#f8fafc] transition">
+                        <td className="px-6 py-3.5 font-mono text-[12px] text-[#0f172a]">{tx.orderId || "tx_auto_001"}</td>
+                        <td className="px-6 py-3.5 capitalize font-medium">{tx.plan}</td>
+                        <td className="px-6 py-3.5 font-semibold">₹{tx.amount}</td>
+                        <td className="px-6 py-3.5 text-[#0891b2] font-medium">+{tx.credits}</td>
+                        <td className="px-6 py-3.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#ecfdf5] text-[#059669]">
+                            <CheckCircle2 size={12} /> {tx.status || "Paid"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-3.5 text-[#94a3b8] text-[12px]">
+                          {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : "Just now"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>
