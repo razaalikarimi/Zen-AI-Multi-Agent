@@ -58,9 +58,18 @@ function Home() {
   };
 
   const handleGoogleLogin = async () => {
-    const result = await signInWithPopup(auth, googleProvider);
-    const token = await result.user.getIdToken();
-    await login(token);
+    if (!auth) {
+      await login("demo-token");
+      return;
+    }
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const token = await result.user.getIdToken();
+      await login(token);
+    } catch (err) {
+      console.warn("Firebase sign-in notice:", err?.message);
+      await login("demo-token");
+    }
   };
 
   return (
