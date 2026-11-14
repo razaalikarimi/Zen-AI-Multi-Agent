@@ -16,7 +16,7 @@ export const handleLogin = async (req, res) => {
           "x-correlation-id": req.correlationId || "req-" + Date.now(),
         },
         body: JSON.stringify(req.body || {}),
-        signal: AbortSignal.timeout(4000), // 4-second timeout to avoid client hangs
+        signal: AbortSignal.timeout(1800), // Fast 1.8-second timeout for instant login response
       });
 
       if (remoteRes.ok) {
