@@ -143,6 +143,16 @@ export const storeMessageHelper = (conversationId, role, content, artifacts = []
   conversationsStore.set(conversationId, conv);
 };
 
+export const getConversationHistory = (conversationId, maxMessages = 10) => {
+  if (!conversationId) return [];
+  const conv = conversationsStore.get(conversationId);
+  if (!conv || !Array.isArray(conv.messages)) return [];
+  return conv.messages.slice(-maxMessages).map((m) => ({
+    role: m.role === "assistant" ? "assistant" : "user",
+    content: m.content || "",
+  }));
+};
+
 export default {
   handleCreateConversation,
   handleGetConversations,
@@ -150,5 +160,6 @@ export default {
   handleUpdateConversation,
   handleSaveMessage,
   storeMessageHelper,
+  getConversationHistory,
 };
 

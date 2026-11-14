@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Send, Paperclip, Square, Zap, MessageSquare, Code2,
   Presentation, Image as ImageIcon, Globe, FileText, X, Mic, MicOff,
@@ -30,6 +31,7 @@ const placeholders = {
 };
 
 export default function ChatInput({ setBanner }) {
+  const location = useLocation();
   const [selectedAgent, setSelectedAgent] = useState("auto");
   const [value, setValue] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -43,6 +45,15 @@ export default function ChatInput({ setBanner }) {
   const dispatch = useDispatch();
   const { selectedConversation } = useSelector(state => state.conversation);
   const { isLoading } = useSelector(state => state.message);
+
+  useEffect(() => {
+    if (location.state?.initialPrompt) {
+      setValue(location.state.initialPrompt);
+    }
+    if (location.state?.selectedAgent) {
+      setSelectedAgent(location.state.selectedAgent);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;

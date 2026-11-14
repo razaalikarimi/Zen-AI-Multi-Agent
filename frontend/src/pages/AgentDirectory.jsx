@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setSelectedConversation } from "../redux/conversation.slice";
+import { setMessages, setArtifacts } from "../redux/message.slice";
 import {
   Cpu, Layers, Code2, Globe, Shield, FileText, BarChart3, Zap,
   ArrowRight, Search, Play, CheckCircle2, Sliders, Sparkles
@@ -99,6 +102,7 @@ const AGENTS = [
 
 export default function AgentDirectory() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
 
@@ -110,8 +114,22 @@ export default function AgentDirectory() {
     return matchesSearch && matchesCategory;
   });
 
-  const launchWithPrompt = (prompt) => {
-    navigate("/chat", { state: { initialPrompt: prompt } });
+  const launchWithPrompt = (prompt, agentId) => {
+    dispatch(setSelectedConversation(null));
+    dispatch(setMessages([]));
+    dispatch(setArtifacts([]));
+    const agentMap = {
+      supervisor: "auto",
+      coding: "coding",
+      research: "search",
+      document: "pdf",
+      data_analysis: "chat",
+      web_search: "search",
+      planning: "chat",
+      review: "chat",
+    };
+    const targetAgent = agentMap[agentId] || "auto";
+    navigate("/chat", { state: { initialPrompt: prompt, selectedAgent: targetAgent } });
   };
 
   return (
@@ -202,7 +220,7 @@ export default function AgentDirectory() {
                   </div>
 
                   <button
-                    onClick={() => launchWithPrompt(agent.samplePrompt)}
+                    onClick={() => launchWithPrompt(agent.samplePrompt, agent.id)}
                     className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[12.5px] font-semibold text-white transition cursor-pointer border-none"
                     style={{ background: agent.color }}
                   >

@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import { createLogger } from "../../shared/logger/logger.js";
 import { sendSuccess, sendError } from "../../shared/utils/response.js";
-import { storeMessageHelper } from "./chat.controller.js";
+import { storeMessageHelper, getConversationHistory } from "./chat.controller.js";
 
 const logger = createLogger("gateway-agent");
 
@@ -17,10 +17,16 @@ const isValidKey = (k) =>
 /**
  * Intelligent AI synthesis using Gemini REST API, Groq, or resilient contextual generator.
  */
-async function callLLM({ prompt, file, modelPreference }) {
+async function callLLM({ prompt, file, modelPreference, conversationId }) {
   const openaiKey = process.env.OPENAI_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   const groqKey = process.env.GROQ_API_KEY;
+
+  // Retrieve prior conversation context for intelligent multi-turn continuity
+  const priorTurns = conversationId ? getConversationHistory(conversationId, 10) : [];
+  const chatHistory = priorTurns.length > 0 && priorTurns[priorTurns.length - 1].content === prompt
+    ? priorTurns.slice(0, -1)
+    : priorTurns;
 
   // 1. OpenAI (GPT-4o / GPT-4o-mini)
   if (isValidKey(openaiKey)) {
@@ -49,8 +55,9 @@ async function callLLM({ prompt, file, modelPreference }) {
                 messages: [
                   {
                     role: "system",
-                    content: "You are Zen AI, an enterprise-grade multi-agent AI assistant. Answer thoroughly, accurately, and professionally. Use Markdown formatting.",
+                    content: "You are Zen AI, an enterprise-grade multi-agent AI assistant. Answer thoroughly, accurately, and professionally. Maintain conversation continuity and context with prior messages and document analysis. Use Markdown formatting.",
                   },
+                  ...chatHistory,
                   { role: "user", content: userContent },
                 ],
                 temperature: 0.7,
@@ -82,8 +89,9 @@ async function callLLM({ prompt, file, modelPreference }) {
           messages: [
             {
               role: "system",
-              content: "You are Zen AI, an enterprise-grade multi-agent AI assistant. Answer thoroughly, accurately, and professionally. Use Markdown formatting.",
+              content: "You are Zen AI, an enterprise-grade multi-agent AI assistant. Answer thoroughly, accurately, and professionally. Maintain conversation continuity and context with prior messages and document analysis. Use Markdown formatting.",
             },
+            ...chatHistory,
             {
               role: "user",
               content: `${fileContext}${prompt}`,
@@ -244,11 +252,12 @@ export const handleAgentChat = async (req, res) => {
       storeMessageHelper(conversationId, "user", actualPrompt);
     }
 
-    // Synthesize response
+    // Synthesize response with multi-turn conversation memory
     const answer = await callLLM({
       prompt: actualPrompt,
       file,
       modelPreference: model,
+      conversationId,
     });
 
     // Extract multi-file projects or code blocks for the Monaco Artifacts studio
