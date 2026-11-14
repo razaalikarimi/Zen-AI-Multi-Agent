@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
   User, Shield, Key, Bell, Moon, Sun, Save, CheckCircle2,
@@ -11,15 +11,41 @@ export default function SettingsPage() {
   const { userData } = useSelector((state) => state.user);
   const dispatch = useDispatch();
 
-  const [name, setName] = useState(userData?.name || "Zen Developer");
-  const [modelPref, setModelPref] = useState("gemini");
-  const [agentPref, setAgentPref] = useState("auto");
+  const [name, setName] = useState(() => {
+    const saved = localStorage.getItem("zen_settings");
+    if (saved) {
+      try { return JSON.parse(saved).name || userData?.name || "Zen Developer"; } catch (e) { /* ignore */ }
+    }
+    return userData?.name || "Zen Developer";
+  });
+
+  const [modelPref, setModelPref] = useState(() => {
+    const saved = localStorage.getItem("zen_settings");
+    if (saved) {
+      try { return JSON.parse(saved).modelPref || "gemini"; } catch (e) { /* ignore */ }
+    }
+    return "gemini";
+  });
+
+  const [agentPref, setAgentPref] = useState(() => {
+    const saved = localStorage.getItem("zen_settings");
+    if (saved) {
+      try { return JSON.parse(saved).agentPref || "auto"; } catch (e) { /* ignore */ }
+    }
+    return "auto";
+  });
+
   const [saved, setSaved] = useState(false);
 
   const handleSave = (e) => {
     e.preventDefault();
+    const settings = { name, modelPref, agentPref };
+    localStorage.setItem("zen_settings", JSON.stringify(settings));
+
     if (userData) {
-      dispatch(setUserData({ ...userData, name }));
+      const updated = { ...userData, name };
+      dispatch(setUserData(updated));
+      localStorage.setItem("user", JSON.stringify(updated));
     }
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
@@ -43,7 +69,7 @@ export default function SettingsPage() {
           {saved && (
             <div className="p-4 rounded-xl bg-[#ecfdf5] border border-[#a7f3d0] text-[#065f46] text-[13px] flex items-center gap-2">
               <CheckCircle2 size={16} className="text-[#10b981]" />
-              Settings updated successfully!
+              Settings updated and saved successfully!
             </div>
           )}
 
@@ -105,7 +131,7 @@ export default function SettingsPage() {
                   <option value="gemini">Google Gemini 2.5 Flash (Balanced & Multimodal)</option>
                   <option value="groq">Groq Llama 3.3 70B (Ultra-Low Latency)</option>
                   <option value="deepseek">DeepSeek Chat V3 (High Reasoning Density)</option>
-                  <option value="openrouter">OpenRouter Auto-Routing</option>
+                  <option value="openai">OpenAI GPT-4o-mini (Precision Orchestration)</option>
                 </select>
               </div>
 
@@ -118,9 +144,11 @@ export default function SettingsPage() {
                 >
                   <option value="auto">Auto (Intelligent Supervisor Routing)</option>
                   <option value="coding">Coding Agent (Monaco Studio Focus)</option>
-                  <option value="research">Research Agent (Deep Synthesis)</option>
-                  <option value="data">Data Analysis Agent</option>
-                  <option value="document">Document Agent (PDF/PPT)</option>
+                  <option value="chat">Chat Agent (Conversational Memory)</option>
+                  <option value="pdf">Document Agent (Executive Reports)</option>
+                  <option value="ppt">Slides Agent (Pitch Decks)</option>
+                  <option value="image">Image Agent (Vision Analysis)</option>
+                  <option value="search">Search Agent (Live Web Crawl)</option>
                 </select>
               </div>
             </div>
@@ -140,4 +168,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-

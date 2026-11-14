@@ -52,6 +52,14 @@ export default function ChatInput({ setBanner }) {
     }
     if (location.state?.selectedAgent) {
       setSelectedAgent(location.state.selectedAgent);
+    } else {
+      try {
+        const saved = localStorage.getItem("zen_settings");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.agentPref) setSelectedAgent(parsed.agentPref);
+        }
+      } catch (e) { /* ignore */ }
     }
   }, [location.state]);
 
