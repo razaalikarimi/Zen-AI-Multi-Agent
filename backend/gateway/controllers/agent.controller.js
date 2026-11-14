@@ -251,15 +251,47 @@ export const handleAgentChat = async (req, res) => {
       modelPreference: model,
     });
 
-    // Check if response contains code blocks to provide as artifacts
+    // Extract multi-file projects or code blocks for the Monaco Artifacts studio
     const artifacts = [];
-    const codeMatch = answer.match(/```([a-zA-Z0-9]*)\n([\s\S]*?)```/);
-    if (codeMatch) {
+    const files = [];
+
+    // 1. FILE: syntax matching
+    const fileMatches = [...answer.matchAll(/FILE:\s*([^\n]+)\n([\s\S]*?)(?=\nFILE:\s*[^\n]+\n|$)/g)];
+    if (fileMatches.length > 0) {
+      fileMatches.forEach((m) => {
+        files.push({
+          name: m[1].trim(),
+          content: m[2].replace(/^```[\w-]*\n?/gm, "").replace(/```$/gm, "").trim(),
+        });
+      });
+    }
+
+    // 2. Markdown fenced code blocks fallback
+    if (files.length === 0) {
+      const codeBlocks = [...answer.matchAll(/```([a-zA-Z0-9]*)\n([\s\S]*?)```/g)];
+      codeBlocks.forEach((cb, idx) => {
+        const lang = (cb[1] || "txt").toLowerCase();
+        let fname = `file_${idx + 1}.${lang}`;
+        if (lang === "html") fname = "index.html";
+        else if (lang === "css") fname = "style.css";
+        else if (lang === "js" || lang === "javascript") fname = "script.js";
+        else if (lang === "py" || lang === "python") fname = "main.py";
+        else if (lang === "json") fname = "data.json";
+
+        files.push({
+          name: fname,
+          content: cb[2].trim(),
+        });
+      });
+    }
+
+    if (files.length > 0) {
       artifacts.push({
         id: "art-" + Date.now(),
-        type: codeMatch[1] || "code",
-        title: "Generated Solution",
-        content: codeMatch[2],
+        type: "project",
+        title: actualPrompt.slice(0, 40) || "Generated Project",
+        files,
+        createdAt: new Date().toISOString(),
       });
     }
 

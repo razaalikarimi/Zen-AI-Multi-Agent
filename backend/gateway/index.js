@@ -11,6 +11,11 @@ import errorHandler from "../shared/middleware/errorHandler.js";
 import { createLogger } from "../shared/logger/logger.js";
 import redis from "../shared/redis/redis.js";
 
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, ".env") });
 dotenv.config();
 
 const logger = createLogger("gateway");

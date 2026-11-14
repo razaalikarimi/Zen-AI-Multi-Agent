@@ -2,6 +2,7 @@ import express from "express";
 import { protect } from "../middlewares/auth.middleware.js";
 import { proxyWithUser } from "../utils/proxyWithHeaders.js";
 import {
+  handleGetPlans,
   handleCreateOrder,
   handleVerifyPayment,
   handleGetTransactions,
@@ -10,6 +11,7 @@ import {
 const router = express.Router();
 const BILLING_SERVICE = process.env.BILLING_SERVICE;
 
+router.get("/plans", handleGetPlans);
 router.post("/create-order", protect, handleCreateOrder);
 router.post("/verify-payment", protect, handleVerifyPayment);
 router.get("/transactions", protect, handleGetTransactions);

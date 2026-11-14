@@ -6,9 +6,10 @@
   "type": "module",
   "scripts": {
     "start": "node backend/gateway/index.js",
+    "dev": "node backend/gateway/index.js",
+    "dev:frontend": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",
     "build:frontend": "npm --prefix frontend run build",
-    "dev": "node run-project.js",
     "install:all": "npm --prefix backend/gateway install && npm --prefix backend/services/auth install && npm --prefix backend/services/chat install && npm --prefix backend/services/billing install && npm --prefix backend/services/agent install && npm --prefix frontend install",
     "lint": "npm --prefix frontend run lint",
     "test": "node --test backend/test/*.test.js"
