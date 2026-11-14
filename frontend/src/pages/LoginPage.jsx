@@ -46,8 +46,11 @@ export default function LoginPage() {
       const token = await result.user.getIdToken();
       await loginWithToken(token, result.user.email);
     } catch (err) {
-      console.warn("Firebase Google authentication fallback:", err?.message);
-      await handleDemoLogin();
+      if (err?.code === "auth/unauthorized-domain") {
+        setError("Domain unauthorized: Add 'zenai.alirazakarimi.in' to Firebase Console > Authentication > Settings > Authorized Domains.");
+      } else if (err?.code !== "auth/popup-closed-by-user") {
+        setError(err?.message || "Google sign-in failed. Please try again.");
+      }
     }
   };
 
@@ -141,14 +144,6 @@ export default function LoginPage() {
               {loading ? "Authenticating..." : "Sign In with Email"}
             </button>
           </form>
-
-          {/* Quick Demo Login Option */}
-          <button
-            onClick={handleDemoLogin}
-            className="w-full py-2.5 rounded-xl text-[12px] font-semibold text-[#38bdf8] bg-[#0891b2]/10 border border-[#0891b2]/20 hover:bg-[#0891b2]/20 transition cursor-pointer flex items-center justify-center gap-1.5"
-          >
-            <Zap size={14} /> Quick Demo Login (Developer Role)
-          </button>
 
           <p className="text-[12px] text-center text-[#94a3b8]">
             Don't have an account?{" "}

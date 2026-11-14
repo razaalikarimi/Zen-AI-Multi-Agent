@@ -68,7 +68,6 @@ function Home() {
       await login(token);
     } catch (err) {
       console.warn("Firebase sign-in notice:", err?.message);
-      await login("demo-token");
     }
   };
 
