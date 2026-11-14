@@ -90,38 +90,48 @@ export default function BillingPortal() {
     try {
       setFeedbackMessage("Initiating Razorpay checkout...");
       const data = await createOrder(planId);
-      const order = data.order || data.data?.order || { id: `order_${Date.now()}`, amount: 49900, currency: "INR" };
+      const order = data.order || data.data?.order || { amount: 19900, currency: "INR" };
       const plan = data.plan || data.data?.plan || PLANS.find((p) => p.id === planId) || { name: planId, credits: 1000 };
+      const keyId = data.keyId || import.meta.env.VITE_RAZORPAY_KEY || "rzp_test_tXD8cP6NSHvKbR";
+
+      // Real Razorpay order IDs have alphanumeric characters like 'order_TzydIRiHC84Tza'
+      const isRealRazorpayOrderId = order?.id && /^order_[A-Za-z0-9]{10,}$/.test(order.id);
 
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY || "rzp_test_placeholder_key",
+        key: keyId,
         amount: order.amount,
         currency: order.currency || "INR",
         name: "Zen AI Multi-Agent Platform",
         description: `Upgrade to ${plan.name} Plan`,
-        order_id: order.id,
+        ...(isRealRazorpayOrderId ? { order_id: order.id } : {}),
+        prefill: {
+          name: userData?.name || "Zen Developer",
+          email: userData?.email || "developer@zen.ai",
+        },
         handler: async (response) => {
           try {
-            await api.post("/api/billing/verify-payment", response);
-            applyPlanUpgrade(planId, plan, response.razorpay_payment_id || `pay_${Date.now()}`, order.id);
+            await api.post("/api/billing/verify-payment", { ...response, planId });
+            applyPlanUpgrade(planId, plan, response.razorpay_payment_id || `pay_${Date.now()}`, response.razorpay_order_id || order?.id);
             setFeedbackMessage("Payment verified and subscription activated successfully!");
           } catch (e) {
-            // Apply optimistic activation
-            applyPlanUpgrade(planId, plan, response.razorpay_payment_id || `pay_${Date.now()}`, order.id);
+            applyPlanUpgrade(planId, plan, response.razorpay_payment_id || `pay_${Date.now()}`, response.razorpay_order_id || order?.id);
             setFeedbackMessage("Payment processed and subscription activated!");
           }
         },
         theme: { color: "#0891b2" },
       };
 
-      if (window.Razorpay && import.meta.env.VITE_RAZORPAY_KEY) {
+      if (window.Razorpay && keyId && !keyId.includes("placeholder")) {
         const rzp = new window.Razorpay(options);
+        rzp.on("payment.failed", function (resp) {
+          setFeedbackMessage(`Payment failed: ${resp.error?.description || "Transaction cancelled"}`);
+        });
         rzp.open();
       } else {
         // Simulated local verification for development test mode
         setFeedbackMessage("Processing test payment verification...");
         setTimeout(() => {
-          applyPlanUpgrade(planId, plan, `pay_test_${Date.now()}`, order.id);
+          applyPlanUpgrade(planId, plan, `pay_test_${Date.now()}`, order.id || `ord_${Date.now()}`);
           setFeedbackMessage(`Test payment successful! Upgraded to ${plan.name} (${plan.credits} credits awarded).`);
         }, 1000);
       }
